@@ -61,11 +61,12 @@ const Store = (() => {
     get tasks() { return state.tasks; },
     get settings() { return state.settings; },
 
-    addTask({ text, urgency, images }) {
+    addTask({ text, details, urgency, images }) {
       const now = Date.now();
       const task = {
         id: uid(),
         text,
+        details: details || '',   // sanitized rich-text HTML
         context: state.settings.context,
         urgency,               // 'high' | 'low'
         createdAt: now,
@@ -496,6 +497,9 @@ const UI = (() => {
     ctxSwitch: $('.context-switch'),
     threshold: $('#old-threshold'),
     newText: $('#new-task-text'),
+    taskDetails: $('#task-details'),
+    detailsToggle: $('#details-toggle'),
+    editDetails: $('#edit-details'),
     urgLow: $('#urg-low'),
     urgHigh: $('#urg-high'),
     addBtn: $('#add-task'),
@@ -593,7 +597,7 @@ const UI = (() => {
       if (!inPeriod(task.createdAt) && !(task.completedAt && inPeriod(task.completedAt))) return false;
     }
     if (queryClauses.length) {
-      const text = (task.text || '').toLowerCase();
+      const text = ((task.text || '') + ' ' + detailsPlain(task)).toLowerCase();
       if (!queryClauses.some(c => c.every(t => t.neg ? !text.includes(t.term) : text.includes(t.term)))) return false;
     }
     return true;
@@ -718,10 +722,85 @@ const UI = (() => {
     if (last < text.length) container.appendChild(document.createTextNode(text.slice(last)));
   }
 
+  /* ---- rich-text details ----
+     Details are stored as HTML but ONLY ever rendered through this
+     sanitizer: a small tag whitelist (paragraphs, lists, emphasis,
+     safe links), all attributes stripped, unknown elements unwrapped
+     to their text. Pasting formatted content from other sites keeps
+     its bullets/numbering; anything executable is discarded. */
+
+  const RICH_TAGS = new Set(['P', 'DIV', 'BR', 'UL', 'OL', 'LI', 'B', 'STRONG',
+    'I', 'EM', 'U', 'S', 'A', 'BLOCKQUOTE', 'CODE', 'PRE',
+    'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
+  const RICH_DROP = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'IFRAME', 'OBJECT', 'EMBED', 'HEAD']);
+
+  function sanitizeRich(html) {
+    const doc = new DOMParser().parseFromString(html || '', 'text/html');
+    const frag = document.createDocumentFragment();
+    (function copy(src, dst, inLink) {
+      for (const node of src.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          // plain URLs become links — except inside an existing link
+          if (inLink) dst.appendChild(document.createTextNode(node.textContent));
+          else renderTextWithLinks(dst, node.textContent);
+        } else if (node.nodeType === Node.ELEMENT_NODE && !RICH_DROP.has(node.tagName)) {
+          if (!RICH_TAGS.has(node.tagName)) { copy(node, dst, inLink); continue; } // unwrap unknown tags
+          if (node.tagName === 'A') {
+            const href = node.getAttribute('href') || '';
+            if (inLink || !/^https?:\/\//i.test(href)) { copy(node, dst, inLink); continue; } // unsafe/nested → text
+            const a = document.createElement('a');
+            a.href = href;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            dst.appendChild(a);
+            copy(node, a, true);
+            continue;
+          }
+          const el = document.createElement(node.tagName.toLowerCase());
+          dst.appendChild(el);
+          copy(node, el, inLink);
+        }
+      }
+    })(doc.body, frag, false);
+    return frag;
+  }
+
+  // Insert already-sanitized content at the caret (or append when the
+  // caret is elsewhere) — used for paste-time sanitization of rich text.
+  function insertSanitized(editor, frag) {
+    const sel = window.getSelection();
+    if (sel.rangeCount && editor.contains(sel.anchorNode)) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      const last = frag.lastChild;
+      range.insertNode(frag);
+      if (last) {
+        range.setStartAfter(last);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    } else {
+      editor.appendChild(frag);
+    }
+  }
+
+  // Sanitized HTML out of a contenteditable editor; '' when effectively empty.
+  function editorHtml(editor) {
+    const frag = sanitizeRich(editor.innerHTML);
+    if (!frag.textContent.trim()) return '';
+    const tmp = document.createElement('div');
+    tmp.appendChild(frag);
+    return tmp.innerHTML;
+  }
+
+  const detailsPlain = task =>
+    (task.details || '').replace(/<[^>]+>/g, ' ');
+
   function taskCard(task, pulse) {
     // Cards render compact (clamped text, image count chip); tapping the
-    // card expands it to show the full text and attached images.
-    const expandable = task.images.length > 0 || task.text.length > 80;
+    // card expands it to show the full text, details, and attached images.
+    const expandable = task.images.length > 0 || task.text.length > 80 || !!task.details;
     const isOpen = expandable && expandedTasks.has(task.id);
 
     const card = document.createElement('div');
@@ -730,7 +809,8 @@ const UI = (() => {
 
     if (expandable) {
       card.addEventListener('click', e => {
-        if (e.target.closest('button, a')) return; // buttons and links handle themselves
+        // buttons/links act on their own; details stay selectable/copyable
+        if (e.target.closest('button, a, .task-details')) return;
         expandedTasks.has(task.id) ? expandedTasks.delete(task.id) : expandedTasks.add(task.id);
         render();
       });
@@ -775,6 +855,14 @@ const UI = (() => {
       meta.appendChild(chip);
     }
 
+    if (task.details && !isOpen) {
+      const chip = document.createElement('span');
+      chip.className = 'img-chip';
+      chip.textContent = '📝';
+      chip.title = 'Has details — tap to expand';
+      meta.appendChild(chip);
+    }
+
     if (expandable) {
       const caret = document.createElement('span');
       caret.className = 'expand-chip';
@@ -782,7 +870,16 @@ const UI = (() => {
       meta.appendChild(caret);
     }
 
-    main.append(text, meta);
+    main.append(text);
+
+    if (task.details && isOpen) {
+      const det = document.createElement('div');
+      det.className = 'task-details';
+      det.appendChild(sanitizeRich(task.details));
+      main.appendChild(det);
+    }
+
+    main.append(meta);
 
     if (task.images.length && isOpen) {
       const thumbs = document.createElement('div');
@@ -878,14 +975,19 @@ const UI = (() => {
 
   function addFromComposer() {
     const text = els.newText.value.trim();
-    if (!text && !draftImages.length) return;
+    const details = editorHtml(els.taskDetails);
+    if (!text && !details && !draftImages.length) return;
     const created = Store.addTask({
-      text: text || '📷 (image task)',
+      text: text || (details ? '📝 (details)' : '📷 (image task)'),
+      details,
       urgency: draftUrgency,
       images: draftImages
     });
     if (created) {
       els.newText.value = '';
+      els.taskDetails.innerHTML = '';
+      els.taskDetails.hidden = true;
+      els.detailsToggle.classList.remove('active');
       draftImages = [];
       renderDraftImages();
       setDraftUrgency('low');
@@ -908,6 +1010,8 @@ const UI = (() => {
   function openModal(task) {
     editing = { id: task.id, urgency: task.urgency, images: [...task.images] };
     els.editText.value = task.text;
+    els.editDetails.textContent = '';
+    els.editDetails.appendChild(sanitizeRich(task.details || ''));
     els.editAge.textContent = Age.label(task);
     setEditUrgency(task.urgency);
     renderEditImages();
@@ -985,9 +1089,10 @@ const UI = (() => {
 
   // The auth redirect briefly leaves the page; keep any half-typed task.
   function stashDraft() {
-    if (els.newText.value.trim() || draftImages.length) {
+    const details = els.taskDetails.innerHTML;
+    if (els.newText.value.trim() || draftImages.length || els.taskDetails.textContent.trim()) {
       sessionStorage.setItem('finisher.draft', JSON.stringify({
-        text: els.newText.value, urgency: draftUrgency, images: draftImages
+        text: els.newText.value, details, urgency: draftUrgency, images: draftImages
       }));
     }
   }
@@ -999,6 +1104,11 @@ const UI = (() => {
     try {
       const d = JSON.parse(raw);
       els.newText.value = d.text || '';
+      if (d.details) {
+        els.taskDetails.appendChild(sanitizeRich(d.details));
+        els.taskDetails.hidden = !els.taskDetails.textContent.trim();
+        els.detailsToggle.classList.toggle('active', !els.taskDetails.hidden);
+      }
       draftImages = Array.isArray(d.images) ? d.images : [];
       setDraftUrgency(d.urgency === 'high' ? 'high' : 'low');
       renderDraftImages();
@@ -1074,11 +1184,32 @@ const UI = (() => {
       if (imgs) { draftImages.push(...await imgs); renderDraftImages(); }
     });
 
+    els.detailsToggle.addEventListener('click', () => {
+      els.taskDetails.hidden = !els.taskDetails.hidden;
+      els.detailsToggle.classList.toggle('active', !els.taskDetails.hidden);
+      if (!els.taskDetails.hidden) els.taskDetails.focus();
+    });
+    // Images pasted into details attach to the task; rich text is
+    // sanitized on the way in, so the editor previews the saved result
+    els.taskDetails.addEventListener('paste', async e => {
+      const imgs = Images.fromClipboard(e);
+      if (imgs) { draftImages.push(...await imgs); renderDraftImages(); return; }
+      const html = e.clipboardData?.getData('text/html');
+      if (html) { e.preventDefault(); insertSanitized(els.taskDetails, sanitizeRich(html)); }
+    });
+
     // Paste an image while the edit modal is open → attach to that task
     els.modal.addEventListener('paste', async e => {
       if (!editing) return;
       const imgs = Images.fromClipboard(e);
       if (imgs) { editing.images.push(...await imgs); renderEditImages(); }
+    });
+
+    els.editDetails.addEventListener('paste', e => {
+      // images bubble to the dialog's handler above; sanitize rich text here
+      if ([...(e.clipboardData?.items || [])].some(i => i.type.startsWith('image/'))) return;
+      const html = e.clipboardData?.getData('text/html');
+      if (html) { e.preventDefault(); insertSanitized(els.editDetails, sanitizeRich(html)); }
     });
 
     els.editUrgLow.addEventListener('click', () => setEditUrgency('low'));
@@ -1087,8 +1218,10 @@ const UI = (() => {
     els.editSave.addEventListener('click', () => {
       if (!editing) return;
       const text = els.editText.value.trim();
+      const details = editorHtml(els.editDetails);
       Store.updateTask(editing.id, {
-        text: text || '📷 (image task)',
+        text: text || (details ? '📝 (details)' : '📷 (image task)'),
+        details,
         urgency: editing.urgency,
         images: editing.images
       });

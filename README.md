@@ -26,10 +26,17 @@ any browser, or host the folder on any static host (GitHub Pages works great).
   more, a "+N more" bar appears; tap it (or the quadrant header) to expand to
   the full list, tap again to collapse. The header badge always shows the true
   count.
-- **Compact, tappable cards** — tasks with attached images or long text render
-  compact (2-line clamp, a `📷 n` chip). Tap the card to expand it and see the
-  full text and image thumbnails; tap again to collapse. Buttons on the card
-  (complete, edit, delete, thumbnails) never trigger the toggle.
+- **Rich-text details** — the 📝 button in the composer opens a details box
+  where Enter starts a new paragraph and formatting pasted from other sites
+  (bullets, numbering, bold, links) transposes intact. Details are stored as
+  sanitized HTML (small tag whitelist, all attributes stripped, unsafe links
+  neutralized — at paste time and again at render). On the grid, details stay
+  hidden until you tap the task; search looks inside them too.
+- **Compact, tappable cards** — tasks with attached images, details, or long
+  text render compact (2-line clamp, `📷 n` / `📝` chips). Tap the card to
+  expand it and see the full text, details, and image thumbnails; tap again
+  to collapse. Buttons, links, and the details block (kept selectable for
+  copying) never trigger the toggle.
 - **Clickable links** — any URL in a task's text (https://… or www.…) becomes
   a tappable link that opens in a new tab; tapping a link never toggles the
   card's expand/collapse.
@@ -85,8 +92,9 @@ app.js
 Task shape:
 
 ```js
-{ id, text, context: 'work'|'home', urgency: 'high'|'low',
-  createdAt, completedAt|null, images: [dataURL…] }
+{ id, text, details: sanitizedHTML, context: 'work'|'home',
+  urgency: 'high'|'low', createdAt, completedAt|null,
+  updatedAt, images: [dataURL…] }
 ```
 
 ## Cross-device sync (Google Drive)

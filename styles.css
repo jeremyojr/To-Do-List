@@ -222,6 +222,63 @@ button { font: inherit; cursor: pointer; }
   flex-wrap: wrap;
 }
 
+/* Details toggle in the composer row */
+.details-toggle {
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  width: 38px;
+  font-size: 16px;
+  flex: none;
+}
+.details-toggle:hover { background: var(--surface-2); }
+.details-toggle.active { background: var(--surface-2); box-shadow: inset 0 0 0 1.5px var(--accent); }
+
+/* Rich-text details editor (composer + edit dialog) */
+.details-editor {
+  margin-top: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 72px;
+  max-height: 40vh;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.details-editor:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.details-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-dim);
+  pointer-events: none;
+}
+.edit-modal .details-editor { background: var(--surface-2); margin-top: 0; }
+
+/* Shared typography for rich details (editor + card display) */
+.details-editor p, .details-editor div,
+.task-details p, .task-details div { margin: 0 0 6px; }
+.details-editor ul, .details-editor ol,
+.task-details ul, .task-details ol { margin: 4px 0 8px; padding-left: 22px; }
+.details-editor li, .task-details li { margin: 2px 0; }
+.details-editor blockquote, .task-details blockquote {
+  border-left: 3px solid var(--line);
+  margin: 6px 0;
+  padding-left: 10px;
+  color: var(--text-dim);
+}
+.details-editor :is(h1, h2, h3, h4, h5, h6),
+.task-details :is(h1, h2, h3, h4, h5, h6) { font-size: 1em; margin: 8px 0 4px; }
+.details-editor pre, .task-details pre {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  overflow-x: auto;
+  font-size: 12px;
+}
+
 /* ---------- Filter & search toolbar ---------- */
 
 .filterbar {
@@ -468,6 +525,22 @@ button { font: inherit; cursor: pointer; }
   width: 100%;
 }
 .more-bar:hover { background: var(--surface-2); }
+
+/* Details shown on an expanded card only */
+.task-details {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 6px 0 4px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  cursor: auto;
+  user-select: text;
+}
+.task-details a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.task-details > :last-child { margin-bottom: 0; }
 
 .task-thumbs { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 

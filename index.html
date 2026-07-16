@@ -45,12 +45,15 @@
     <div class="composer-row">
       <input id="new-task-text" type="text" autocomplete="off"
              placeholder="Add a task… (paste an image here to attach it)" />
+      <button id="details-toggle" class="details-toggle" title="Add details (paragraphs, bullets…)">📝</button>
       <div class="urgency-pick" role="radiogroup" aria-label="Urgency">
         <button id="urg-low"  class="urg-btn selected" role="radio" aria-checked="true">Low</button>
         <button id="urg-high" class="urg-btn" role="radio" aria-checked="false">High 🔥</button>
       </div>
       <button id="add-task" class="add-btn">Add</button>
     </div>
+    <div id="task-details" class="details-editor" contenteditable="true" hidden
+         data-placeholder="Details… Enter starts a new paragraph. Bullets and numbering survive pasting from other sites."></div>
     <div id="draft-images" class="draft-images" hidden></div>
   </section>
 
@@ -128,7 +131,9 @@
   <dialog id="edit-modal" class="edit-modal">
     <form method="dialog">
       <h2>Edit task</h2>
-      <textarea id="edit-text" rows="3"></textarea>
+      <textarea id="edit-text" rows="2"></textarea>
+      <div id="edit-details" class="details-editor" contenteditable="true"
+           data-placeholder="Details… (optional — paragraphs, bullets, numbering)"></div>
       <div class="edit-row">
         <div class="urgency-pick" role="radiogroup" aria-label="Urgency">
           <button type="button" id="edit-urg-low"  class="urg-btn">Low</button>
