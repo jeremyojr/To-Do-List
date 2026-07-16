@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Matrix To-Do</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">▦</span>
+      <h1>Matrix&nbsp;To-Do</h1>
+    </div>
+
+    <!-- Context switcher: Work / Home -->
+    <div class="context-switch" role="tablist" aria-label="Task context">
+      <button id="ctx-work" class="ctx-btn" role="tab" aria-selected="true">💼 Work</button>
+      <button id="ctx-home" class="ctx-btn" role="tab" aria-selected="false">🏠 Home</button>
+      <span class="ctx-glider" aria-hidden="true"></span>
+    </div>
+
+    <div class="topbar-right">
+      <label class="threshold-ctl" title="How many days until a task counts as 'old'">
+        Old after
+        <select id="old-threshold">
+          <option value="1">1 day</option>
+          <option value="2">2 days</option>
+          <option value="3" selected>3 days</option>
+          <option value="5">5 days</option>
+          <option value="7">7 days</option>
+          <option value="14">14 days</option>
+        </select>
+      </label>
+      <button id="archive-toggle" class="archive-btn">
+        🗄 Archive <span id="archive-count" class="badge">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Composer -->
+  <section class="composer">
+    <div class="composer-row">
+      <input id="new-task-text" type="text" autocomplete="off"
+             placeholder="Add a task… (paste an image here to attach it)" />
+      <div class="urgency-pick" role="radiogroup" aria-label="Urgency">
+        <button id="urg-low"  class="urg-btn selected" role="radio" aria-checked="true">Low</button>
+        <button id="urg-high" class="urg-btn" role="radio" aria-checked="false">High 🔥</button>
+      </div>
+      <button id="add-task" class="add-btn">Add</button>
+    </div>
+    <div id="draft-images" class="draft-images" hidden></div>
+  </section>
+
+  <!-- The 2x2 Matrix -->
+  <main class="matrix-wrap">
+    <div class="y-axis" aria-hidden="true">
+      <span class="axis-end">High</span>
+      <span class="axis-name">Urgency</span>
+      <span class="axis-end">Low</span>
+    </div>
+
+    <div class="quads">
+      <section class="quad" id="quad-high-new" data-urgency="high" data-age="new">
+        <header><h2>🔥 Urgent · New</h2><span class="quad-hint">just landed, hot</span></header>
+        <div class="quad-body"></div>
+      </section>
+      <section class="quad" id="quad-high-old" data-urgency="high" data-age="old">
+        <header><h2>🚨 Urgent · Aging</h2><span class="quad-hint">do these first</span></header>
+        <div class="quad-body"></div>
+      </section>
+      <section class="quad" id="quad-low-new" data-urgency="low" data-age="new">
+        <header><h2>🌱 Chill · New</h2><span class="quad-hint">fresh, no rush</span></header>
+        <div class="quad-body"></div>
+      </section>
+      <section class="quad" id="quad-low-old" data-urgency="low" data-age="old">
+        <header><h2>🪨 Chill · Aging</h2><span class="quad-hint">lingering — finish or drop</span></header>
+        <div class="quad-body"></div>
+      </section>
+    </div>
+
+    <div class="x-axis" aria-hidden="true">
+      <span class="axis-end">New</span>
+      <span class="axis-name">Age →</span>
+      <span class="axis-end">Old</span>
+    </div>
+  </main>
+
+  <!-- Archive drawer -->
+  <aside id="archive-drawer" class="archive-drawer" hidden>
+    <header>
+      <h2>🗄 Archive <span class="archive-ctx-label"></span></h2>
+      <div>
+        <button id="clear-archive" class="danger-btn">Clear all</button>
+        <button id="close-archive" class="ghost-btn">✕</button>
+      </div>
+    </header>
+    <div id="archive-body" class="archive-body"></div>
+  </aside>
+  <div id="drawer-scrim" class="scrim" hidden></div>
+
+  <!-- Edit modal -->
+  <dialog id="edit-modal" class="edit-modal">
+    <form method="dialog">
+      <h2>Edit task</h2>
+      <textarea id="edit-text" rows="3"></textarea>
+      <div class="edit-row">
+        <div class="urgency-pick" role="radiogroup" aria-label="Urgency">
+          <button type="button" id="edit-urg-low"  class="urg-btn">Low</button>
+          <button type="button" id="edit-urg-high" class="urg-btn">High 🔥</button>
+        </div>
+        <span id="edit-age" class="age-chip"></span>
+      </div>
+      <p class="paste-hint">📋 Paste an image anywhere in this dialog to attach it.</p>
+      <div id="edit-images" class="edit-images"></div>
+      <footer>
+        <button type="button" id="edit-delete" class="danger-btn">Delete task</button>
+        <span class="spacer"></span>
+        <button type="button" id="edit-cancel" class="ghost-btn">Cancel</button>
+        <button type="button" id="edit-save" class="add-btn">Save</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Image lightbox -->
+  <div id="lightbox" class="lightbox" hidden>
+    <img id="lightbox-img" alt="Task attachment (enlarged)" />
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
