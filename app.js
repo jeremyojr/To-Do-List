@@ -227,7 +227,8 @@ const Images = (() => {
    once in the in-app Sync dialog. */
 
 const Sync = (() => {
-  const DEFAULT_CLIENT_ID = ''; // hardcode your OAuth Client ID here, or paste it in the Sync dialog
+  // OAuth Client ID (public by design — only works from the authorized origin)
+  const DEFAULT_CLIENT_ID = '520934448997-8rhk87lrpda9rvvfo643pljqv27111bf.apps.googleusercontent.com';
   const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
   const FILE_NAME = 'finisher-data.json';
   const API = 'https://www.googleapis.com/drive/v3';
@@ -793,7 +794,7 @@ const UI = (() => {
   }
 
   function openSyncModal() {
-    els.syncSetup.hidden = Sync.configured && Sync.enabled;
+    els.syncSetup.hidden = Sync.configured; // paste field only appears if no Client ID is built in
     els.syncClientId.value = Store.settings.driveClientId || '';
     els.syncModal.showModal();
   }
