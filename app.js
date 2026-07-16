@@ -24,17 +24,30 @@ const Store = (() => {
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (!raw) return defaults();
+      if (!raw) return migrate(defaults());
       const parsed = JSON.parse(raw);
-      return { ...defaults(), ...parsed, settings: { ...defaults().settings, ...parsed.settings } };
+      return migrate({ ...defaults(), ...parsed, settings: { ...defaults().settings, ...parsed.settings } });
     } catch {
-      return defaults();
+      return migrate(defaults());
     }
+  }
+
+  // Additive schema upgrades; the storage key stays matrixTodo.v1.
+  // - updatedAt powers newest-edit-wins sync merges.
+  // - Deleted tasks become tombstones ({id, deleted, updatedAt}) so a
+  //   delete on one device isn't resurrected by another; purge them
+  //   after 30 days to keep the file small.
+  function migrate(s) {
+    const cutoff = Date.now() - 30 * 86_400_000;
+    s.tasks = s.tasks.filter(t => !(t.deleted && t.updatedAt < cutoff));
+    for (const t of s.tasks) if (!t.updatedAt) t.updatedAt = t.completedAt || t.createdAt;
+    return s;
   }
 
   function save() {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
+      document.dispatchEvent(new CustomEvent('finisher:saved'));
       return true;
     } catch (err) {
       alert('Could not save — browser storage is full. Try removing some attached images or clearing the archive.');
@@ -49,13 +62,15 @@ const Store = (() => {
     get settings() { return state.settings; },
 
     addTask({ text, urgency, images }) {
+      const now = Date.now();
       const task = {
         id: uid(),
         text,
         context: state.settings.context,
         urgency,               // 'high' | 'low'
-        createdAt: Date.now(),
+        createdAt: now,
         completedAt: null,
+        updatedAt: now,
         images: images || []
       };
       state.tasks.push(task);
@@ -65,17 +80,26 @@ const Store = (() => {
 
     updateTask(id, patch) {
       const t = state.tasks.find(t => t.id === id);
-      if (t) { Object.assign(t, patch); save(); }
+      if (t) { Object.assign(t, patch, { updatedAt: Date.now() }); save(); }
       return t;
     },
 
     deleteTask(id) {
-      state.tasks = state.tasks.filter(t => t.id !== id);
+      state.tasks = state.tasks.map(t =>
+        t.id === id ? { id, deleted: true, updatedAt: Date.now() } : t);
       save();
     },
 
     clearArchive(context) {
-      state.tasks = state.tasks.filter(t => !(t.completedAt && t.context === context));
+      state.tasks = state.tasks.map(t =>
+        (t.completedAt && t.context === context && !t.deleted)
+          ? { id: t.id, deleted: true, updatedAt: Date.now() } : t);
+      save();
+    },
+
+    // Install a merged task list coming back from sync.
+    replaceTasks(tasks) {
+      state.tasks = tasks;
       save();
     },
 
@@ -145,7 +169,7 @@ const Age = (() => {
   }
 
   const fingerprint = () =>
-    Store.tasks.map(t => `${t.id}:${isOld(t) ? 'o' : 'n'}:${ageDays(t)}`).join('|');
+    Store.tasks.filter(t => !t.deleted).map(t => `${t.id}:${isOld(t) ? 'o' : 'n'}:${ageDays(t)}`).join('|');
 
   return { ageDays, isOld, label, stamp, start };
 })();
@@ -190,6 +214,196 @@ const Images = (() => {
   return { fromClipboard };
 })();
 
+/* ------------------------------ Sync ------------------------------ */
+/* Optional cross-device sync via Google Drive. The task list is kept
+   as one JSON file in the app's hidden appDataFolder in the USER'S OWN
+   Drive — this app can only see its own file, never the rest of Drive.
+   Merging is per task, newest updatedAt wins; deletions propagate via
+   tombstones. Local storage stays the source for rendering, so the app
+   is fully usable offline and reconciles when a connection returns.
+
+   Requires a Google OAuth Client ID (free) whose authorized JavaScript
+   origin is the URL this app is served from. Set it below or paste it
+   once in the in-app Sync dialog. */
+
+const Sync = (() => {
+  const DEFAULT_CLIENT_ID = ''; // hardcode your OAuth Client ID here, or paste it in the Sync dialog
+  const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+  const FILE_NAME = 'finisher-data.json';
+  const API = 'https://www.googleapis.com/drive/v3';
+  const UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
+
+  let tokenClient = null;
+  let accessToken = null;
+  let fileId = null;
+  let state = 'off';        // off | signedout | syncing | synced | error
+  let lastSyncAt = null;
+  let pushTimer = null;
+  let applyingRemote = false;
+  let onRemoteApplied = () => {};
+  let onState = () => {};
+
+  const clientId = () => Store.settings.driveClientId || DEFAULT_CLIENT_ID;
+  const enabled = () => !!Store.settings.driveSyncOn;
+
+  function setState(s) { state = s; onState(state, lastSyncAt); }
+
+  function loadGis() {
+    if (window.google?.accounts?.oauth2) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('Could not load Google sign-in (are you offline, or does this host block external scripts?)'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function requestToken(interactive) {
+    return new Promise((resolve, reject) => {
+      tokenClient = tokenClient || google.accounts.oauth2.initTokenClient({
+        client_id: clientId(), scope: SCOPE, callback: () => {}
+      });
+      tokenClient.callback = resp =>
+        resp && resp.access_token ? resolve(resp.access_token) : reject(new Error(resp?.error || 'Sign-in was cancelled'));
+      tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+    });
+  }
+
+  async function api(url, opts = {}, retry = true) {
+    const res = await fetch(url, {
+      ...opts,
+      headers: { Authorization: `Bearer ${accessToken}`, ...(opts.headers || {}) }
+    });
+    if (res.status === 401 && retry) {
+      accessToken = await requestToken(false); // silent refresh, then retry once
+      return api(url, opts, false);
+    }
+    if (!res.ok) throw new Error(`Drive API ${res.status}`);
+    return res;
+  }
+
+  async function findFile() {
+    if (fileId) return fileId;
+    const q = encodeURIComponent(`name='${FILE_NAME}'`);
+    const res = await api(`${API}/files?spaces=appDataFolder&q=${q}&fields=files(id)`);
+    const { files } = await res.json();
+    fileId = files?.[0]?.id || null;
+    return fileId;
+  }
+
+  async function createFile() {
+    const res = await api(`${API}/files`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: FILE_NAME, parents: ['appDataFolder'] })
+    });
+    fileId = (await res.json()).id;
+    return fileId;
+  }
+
+  const download = async id =>
+    (await api(`${API}/files/${id}?alt=media`)).json();
+
+  const upload = (id, data) =>
+    api(`${UPLOAD}/files/${id}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+  // Per-task merge: for each id keep whichever side edited it last.
+  function merge(remoteTasks, localTasks) {
+    const byId = new Map();
+    for (const t of remoteTasks) byId.set(t.id, t);
+    for (const t of localTasks) {
+      const r = byId.get(t.id);
+      if (!r || (t.updatedAt || 0) >= (r.updatedAt || 0)) byId.set(t.id, t);
+    }
+    return [...byId.values()];
+  }
+
+  const signature = tasks =>
+    JSON.stringify([...tasks].sort((a, b) => a.id < b.id ? -1 : 1));
+
+  async function syncNow() {
+    if (!accessToken) return;
+    setState('syncing');
+    try {
+      const id = await findFile() || await createFile();
+      let remoteTasks = [];
+      try {
+        const remote = await download(id);
+        if (Array.isArray(remote?.tasks)) remoteTasks = remote.tasks;
+      } catch { /* empty or unreadable file: treat as first sync */ }
+
+      const merged = merge(remoteTasks, Store.tasks);
+
+      if (signature(merged) !== signature(Store.tasks)) {
+        applyingRemote = true;
+        Store.replaceTasks(merged);
+        applyingRemote = false;
+        onRemoteApplied();
+      }
+      if (signature(merged) !== signature(remoteTasks)) {
+        await upload(id, { version: 1, savedAt: Date.now(), tasks: merged });
+      }
+      lastSyncAt = Date.now();
+      setState('synced');
+    } catch (err) {
+      console.warn('Sync failed:', err);
+      setState('error');
+    }
+  }
+
+  // Local edits push after a short quiet period (each sync re-pulls first,
+  // so racing edits from another device still merge safely).
+  function notifyLocalChange() {
+    if (applyingRemote || !enabled() || !accessToken) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(syncNow, 2500);
+  }
+
+  async function connect(interactive) {
+    await loadGis();
+    accessToken = await requestToken(interactive);
+    Store.setSetting('driveSyncOn', true);
+    await syncNow();
+  }
+
+  function disable() {
+    Store.setSetting('driveSyncOn', false);
+    accessToken = null;
+    fileId = null;
+    setState('off');
+  }
+
+  function init(remoteAppliedCb, stateCb) {
+    onRemoteApplied = remoteAppliedCb;
+    onState = stateCb;
+    document.addEventListener('finisher:saved', notifyLocalChange);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && enabled() && accessToken) syncNow();
+    });
+    setInterval(() => { if (enabled() && accessToken) syncNow(); }, 120_000);
+
+    if (enabled() && clientId()) {
+      // Re-attach silently on load; if Google needs a click, show "sign in".
+      connect(false).catch(() => setState('signedout'));
+    } else {
+      setState(enabled() ? 'signedout' : 'off');
+    }
+  }
+
+  return {
+    init, connect, disable, syncNow,
+    get state() { return state; },
+    get lastSyncAt() { return lastSyncAt; },
+    get configured() { return !!clientId(); },
+    get enabled() { return enabled(); }
+  };
+})();
+
 /* ------------------------------- UI ------------------------------ */
 
 const UI = (() => {
@@ -229,7 +443,15 @@ const UI = (() => {
     editCancel: $('#edit-cancel'),
     editSave: $('#edit-save'),
     lightbox: $('#lightbox'),
-    lightboxImg: $('#lightbox-img')
+    lightboxImg: $('#lightbox-img'),
+    syncBtn: $('#sync-btn'),
+    syncModal: $('#sync-modal'),
+    syncStatus: $('#sync-status'),
+    syncSetup: $('#sync-setup'),
+    syncClientId: $('#sync-client-id'),
+    syncConnect: $('#sync-connect'),
+    syncOff: $('#sync-off'),
+    syncClose: $('#sync-close')
   };
 
   let draftUrgency = 'low';
@@ -247,8 +469,9 @@ const UI = (() => {
 
   function render() {
     const ctx = Store.settings.context;
-    const active = Store.tasks.filter(t => t.context === ctx && !t.completedAt);
-    const archived = Store.tasks.filter(t => t.context === ctx && t.completedAt);
+    const live = Store.tasks.filter(t => !t.deleted && t.context === ctx);
+    const active = live.filter(t => !t.completedAt);
+    const archived = live.filter(t => t.completedAt);
 
     // Oldest first inside each quadrant — the longest-waiting task tops the pile.
     active.sort((a, b) => a.createdAt - b.createdAt);
@@ -543,6 +766,52 @@ const UI = (() => {
     els.lightbox.hidden = false;
   }
 
+  /* ---- sync ---- */
+
+  function syncStateChanged(state, lastSyncAt) {
+    const labels = {
+      off: '☁ Sync',
+      signedout: '☁ Sign in',
+      syncing: '⟳ Syncing…',
+      synced: '☁ Synced',
+      error: '⚠ Sync'
+    };
+    els.syncBtn.textContent = labels[state] || '☁ Sync';
+
+    const at = lastSyncAt ? ` Last synced ${Age.stamp(lastSyncAt)}.` : '';
+    const messages = {
+      off: 'Sync is off. Your tasks stay on this device only.',
+      signedout: 'Sync is on, but this device isn’t signed in. Connect to resume syncing.',
+      syncing: 'Syncing with Google Drive…',
+      synced: `Up to date with Google Drive.${at}`,
+      error: `Couldn’t reach Google Drive — will keep retrying. Your tasks are safe on this device.${at}`
+    };
+    els.syncStatus.textContent = messages[state] || '';
+    els.syncOff.hidden = state === 'off';
+    els.syncConnect.textContent =
+      state === 'synced' || state === 'syncing' ? 'Sync now' : 'Connect Google Drive';
+  }
+
+  function openSyncModal() {
+    els.syncSetup.hidden = Sync.configured && Sync.enabled;
+    els.syncClientId.value = Store.settings.driveClientId || '';
+    els.syncModal.showModal();
+  }
+
+  async function syncConnectClicked() {
+    const pasted = els.syncClientId.value.trim();
+    if (pasted) Store.setSetting('driveClientId', pasted);
+    if (!Sync.configured) {
+      els.syncStatus.textContent = 'Paste your Google OAuth Client ID first (see README for the one-time setup).';
+      return;
+    }
+    try {
+      await Sync.connect(Sync.state !== 'synced' && Sync.state !== 'syncing');
+    } catch (err) {
+      els.syncStatus.textContent = `Couldn’t connect: ${err.message}`;
+    }
+  }
+
   /* ---- archive drawer ---- */
 
   function toggleArchive(open) {
@@ -631,9 +900,17 @@ const UI = (() => {
       if (e.key === 'Escape' && !els.lightbox.hidden) els.lightbox.hidden = true;
     });
 
+    els.syncBtn.addEventListener('click', openSyncModal);
+    els.syncConnect.addEventListener('click', syncConnectClicked);
+    els.syncOff.addEventListener('click', () => { Sync.disable(); });
+    els.syncClose.addEventListener('click', () => els.syncModal.close());
+
     // Start the age engine (midnight tick + drift watchdog + wake-up hook)
     refreshAgeFingerprint = Age.start(render);
     render();
+
+    // Start sync (no-op until connected in the ☁ dialog)
+    Sync.init(render, syncStateChanged);
   }
 
   return { init };

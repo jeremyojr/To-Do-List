@@ -33,6 +33,7 @@
           <option value="14">14 days</option>
         </select>
       </label>
+      <button id="sync-btn" class="archive-btn" title="Cross-device sync via Google Drive">☁ Sync</button>
       <button id="archive-toggle" class="archive-btn">
         🗄 Archive <span id="archive-count" class="badge">0</span>
       </button>
@@ -119,6 +120,27 @@
         <span class="spacer"></span>
         <button type="button" id="edit-cancel" class="ghost-btn">Cancel</button>
         <button type="button" id="edit-save" class="add-btn">Save</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Sync dialog -->
+  <dialog id="sync-modal" class="edit-modal">
+    <form method="dialog">
+      <h2>☁ Cross-device sync</h2>
+      <p class="paste-hint">Your tasks are saved as a private file in <strong>your own Google Drive</strong>
+        (a hidden app folder — this app can never see the rest of your Drive).
+        Sign in with the same Google account on each device and they all share one list.</p>
+      <p id="sync-status" class="paste-hint">Sync is off.</p>
+      <div id="sync-setup">
+        <label class="paste-hint" for="sync-client-id">Google OAuth Client ID (one-time setup — see README):</label>
+        <input id="sync-client-id" type="text" placeholder="1234567890-abc.apps.googleusercontent.com" />
+      </div>
+      <footer>
+        <button type="button" id="sync-off" class="danger-btn" hidden>Turn off</button>
+        <span class="spacer"></span>
+        <button type="button" id="sync-close" class="ghost-btn">Close</button>
+        <button type="button" id="sync-connect" class="add-btn">Connect Google Drive</button>
       </footer>
     </form>
   </dialog>

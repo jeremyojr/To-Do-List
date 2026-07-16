@@ -83,11 +83,31 @@ Task shape:
   createdAt, completedAt|null, images: [dataURL…] }
 ```
 
-## A note on cross-device sync
+## Cross-device sync (Google Drive)
 
-`localStorage` is per-browser-per-device: your phone, tablet, and PC each keep
-their own copy. The UI is fully consistent across all of them, but tasks
-entered on one device won't appear on another without a sync layer. The clean
-upgrade path is to swap the `Store` module for a small backend or a service
-like Firebase/Supabase — every other module only talks to `Store`, so nothing
-else needs to change.
+Tasks live in `localStorage` per device, and can optionally sync across all
+your devices through a private file in **your own Google Drive** (the hidden
+`appDataFolder` — the app can only ever see its own file, never the rest of
+your Drive). Merging is per task, newest edit wins; deletions propagate via
+tombstones; the app stays fully usable offline and reconciles when back
+online. Devices sync on open, when the tab regains focus, ~2.5s after any
+edit, and every 2 minutes.
+
+### One-time setup (free)
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) →
+   create a project (call it `Finisher`).
+2. **APIs & Services → Library** → search "Google Drive API" → **Enable**.
+3. **APIs & Services → OAuth consent screen** → External → fill in the app
+   name and your email → save. Under **Test users**, add your own Gmail
+   address.
+4. **APIs & Services → Credentials → Create credentials → OAuth client ID** →
+   type **Web application** → under *Authorized JavaScript origins* add the
+   URL the app is served from (e.g. `https://<you>.github.io`) → Create →
+   copy the **Client ID**.
+5. In the app, tap **☁ Sync**, paste the Client ID, and **Connect Google
+   Drive**. Repeat the connect step (sign-in only) once on each device.
+
+The Client ID is not a secret — it only works from the origins you authorized.
+It can also be hardcoded as `DEFAULT_CLIENT_ID` in `app.js` so devices never
+need the paste step.

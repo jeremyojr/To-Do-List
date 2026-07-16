@@ -541,6 +541,17 @@ button { font: inherit; cursor: pointer; }
   resize: vertical;
 }
 .edit-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+#sync-setup { display: flex; flex-direction: column; gap: 6px; }
+#sync-client-id {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+}
 .paste-hint { margin: 0; font-size: 12px; color: var(--text-dim); }
 .edit-images { display: flex; gap: 8px; flex-wrap: wrap; }
 .edit-modal footer { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
