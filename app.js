@@ -230,6 +230,12 @@ const UI = (() => {
   let refreshAgeFingerprint = () => {};
   let editing = null; // { id, urgency, images } while the modal is open
 
+  // View state (session-only): quadrants showing their full list, and
+  // individual tasks expanded to reveal full text + attached images.
+  const QUAD_CAP = 8;
+  const expandedQuads = new Set(); // quadrant keys, e.g. 'high-old'
+  const expandedTasks = new Set(); // task ids
+
   /* ---- rendering ---- */
 
   function render() {
@@ -237,33 +243,76 @@ const UI = (() => {
     const active = Store.tasks.filter(t => t.context === ctx && !t.completedAt);
     const archived = Store.tasks.filter(t => t.context === ctx && t.completedAt);
 
-    for (const body of Object.values(els.quads)) body.textContent = '';
-
     // Oldest first inside each quadrant — the longest-waiting task tops the pile.
     active.sort((a, b) => a.createdAt - b.createdAt);
 
+    const groups = { 'high-new': [], 'high-old': [], 'low-new': [], 'low-old': [] };
     for (const task of active) {
-      const key = `${task.urgency}-${Age.isOld(task) ? 'old' : 'new'}`;
-      els.quads[key].appendChild(taskCard(task, key === 'high-old'));
+      groups[`${task.urgency}-${Age.isOld(task) ? 'old' : 'new'}`].push(task);
     }
-
-    for (const [key, body] of Object.entries(els.quads)) {
-      if (!body.children.length) {
-        const empty = document.createElement('div');
-        empty.className = 'quad-empty';
-        empty.textContent = 'Nothing here ✨';
-        body.appendChild(empty);
-      }
-    }
+    for (const [key, tasks] of Object.entries(groups)) renderQuad(key, tasks);
 
     els.archiveCount.textContent = archived.length;
     renderArchive(archived);
     refreshAgeFingerprint();
   }
 
+  function renderQuad(key, tasks) {
+    const body = els.quads[key];
+    body.textContent = '';
+
+    const section = body.closest('.quad');
+    const count = section.querySelector('.quad-count');
+    count.hidden = !tasks.length;
+    count.textContent = tasks.length;
+    section.querySelector('header').classList.toggle('clickable', tasks.length > QUAD_CAP);
+
+    if (!tasks.length) {
+      expandedQuads.delete(key);
+      const empty = document.createElement('div');
+      empty.className = 'quad-empty';
+      empty.textContent = 'Nothing here ✨';
+      body.appendChild(empty);
+      return;
+    }
+
+    const open = expandedQuads.has(key);
+    const visible = open ? tasks : tasks.slice(0, QUAD_CAP);
+    for (const task of visible) body.appendChild(taskCard(task, key === 'high-old'));
+
+    if (tasks.length > QUAD_CAP) {
+      const bar = document.createElement('button');
+      bar.className = 'more-bar';
+      bar.textContent = open
+        ? '▴ Show fewer'
+        : `▾ Show all ${tasks.length} (+${tasks.length - QUAD_CAP} more)`;
+      bar.addEventListener('click', () => toggleQuad(key));
+      body.appendChild(bar);
+    }
+  }
+
+  function toggleQuad(key) {
+    expandedQuads.has(key) ? expandedQuads.delete(key) : expandedQuads.add(key);
+    render();
+  }
+
   function taskCard(task, pulse) {
+    // Cards render compact (clamped text, image count chip); tapping the
+    // card expands it to show the full text and attached images.
+    const expandable = task.images.length > 0 || task.text.length > 80;
+    const isOpen = expandable && expandedTasks.has(task.id);
+
     const card = document.createElement('div');
-    card.className = 'task-card' + (pulse ? ' pulse' : '') + (task.completedAt ? ' done' : '');
+    card.className = 'task-card' + (pulse ? ' pulse' : '') + (task.completedAt ? ' done' : '')
+      + (expandable ? ' expandable' : '') + (isOpen ? ' open' : '');
+
+    if (expandable) {
+      card.addEventListener('click', e => {
+        if (e.target.closest('button')) return; // check/edit/delete/thumbs handle themselves
+        expandedTasks.has(task.id) ? expandedTasks.delete(task.id) : expandedTasks.add(task.id);
+        render();
+      });
+    }
 
     const check = document.createElement('button');
     check.className = 'task-check';
@@ -291,9 +340,23 @@ const UI = (() => {
       : Age.label(task);
     meta.appendChild(age);
 
+    if (task.images.length && !isOpen) {
+      const chip = document.createElement('span');
+      chip.className = 'img-chip';
+      chip.textContent = `📷 ${task.images.length}`;
+      meta.appendChild(chip);
+    }
+
+    if (expandable) {
+      const caret = document.createElement('span');
+      caret.className = 'expand-chip';
+      caret.textContent = isOpen ? '▴ less' : '▾ more';
+      meta.appendChild(caret);
+    }
+
     main.append(text, meta);
 
-    if (task.images.length) {
+    if (task.images.length && isOpen) {
       const thumbs = document.createElement('div');
       thumbs.className = 'task-thumbs';
       task.images.forEach(src => thumbs.appendChild(thumbButton(src)));
@@ -462,6 +525,14 @@ const UI = (() => {
 
     els.ctxWork.addEventListener('click', () => setContext('work'));
     els.ctxHome.addEventListener('click', () => setContext('home'));
+
+    // Tapping a quadrant header expands/collapses its list (when over the cap)
+    for (const [key, body] of Object.entries(els.quads)) {
+      const header = body.closest('.quad').querySelector('header');
+      header.addEventListener('click', () => {
+        if (header.classList.contains('clickable')) toggleQuad(key);
+      });
+    }
 
     els.threshold.addEventListener('change', () => {
       Store.setSetting('oldThresholdDays', Number(els.threshold.value));

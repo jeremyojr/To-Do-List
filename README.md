@@ -22,6 +22,14 @@ any browser, or host the folder on any static host (GitHub Pages works great).
 ## Features
 
 - **Work / Home context switcher** — two fully separate task lists, one toggle.
+- **Capped quadrants** — each quadrant shows at most 8 tasks. When there are
+  more, a "+N more" bar appears; tap it (or the quadrant header) to expand to
+  the full list, tap again to collapse. The header badge always shows the true
+  count.
+- **Compact, tappable cards** — tasks with attached images or long text render
+  compact (2-line clamp, a `📷 n` chip). Tap the card to expand it and see the
+  full text and image thumbnails; tap again to collapse. Buttons on the card
+  (complete, edit, delete, thumbnails) never trigger the toggle.
 - **Paste images** — copy any image and paste it into the composer (or into a
   task's edit dialog) to attach it. Images are downscaled to ≤1024px JPEG
   before storage to respect the localStorage budget. Click a thumbnail for a
