@@ -362,6 +362,10 @@ button { font: inherit; cursor: pointer; }
 
 .task-text { font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
 
+.task-text a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.task-text a:hover { opacity: .8; }
+.task-card.done .task-text a { color: var(--text-dim); }
+
 /* Compact cards clamp long text; tap to expand */
 .task-card.expandable { cursor: pointer; }
 .task-card.expandable:not(.open) .task-text {

@@ -30,6 +30,9 @@ any browser, or host the folder on any static host (GitHub Pages works great).
   compact (2-line clamp, a `📷 n` chip). Tap the card to expand it and see the
   full text and image thumbnails; tap again to collapse. Buttons on the card
   (complete, edit, delete, thumbnails) never trigger the toggle.
+- **Clickable links** — any URL in a task's text (https://… or www.…) becomes
+  a tappable link that opens in a new tab; tapping a link never toggles the
+  card's expand/collapse.
 - **Paste images** — copy any image and paste it into the composer (or into a
   task's edit dialog) to attach it. Images are downscaled to ≤1024px JPEG
   before storage to respect the localStorage budget. Click a thumbnail for a

@@ -303,6 +303,27 @@ const UI = (() => {
     render();
   }
 
+  // Render plain text into `container`, turning URLs into clickable links.
+  // Built with DOM nodes (never innerHTML) so task text can't inject markup.
+  const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+
+  function renderTextWithLinks(container, text) {
+    let last = 0;
+    for (const m of text.matchAll(URL_RE)) {
+      let url = m[0].replace(/[).,;:!?\]]+$/, ''); // trailing punctuation isn't part of the URL
+      if (!url) continue;
+      if (m.index > last) container.appendChild(document.createTextNode(text.slice(last, m.index)));
+      const a = document.createElement('a');
+      a.href = url.toLowerCase().startsWith('www.') ? 'https://' + url : url;
+      a.textContent = url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      container.appendChild(a);
+      last = m.index + url.length;
+    }
+    if (last < text.length) container.appendChild(document.createTextNode(text.slice(last)));
+  }
+
   function taskCard(task, pulse) {
     // Cards render compact (clamped text, image count chip); tapping the
     // card expands it to show the full text and attached images.
@@ -315,7 +336,7 @@ const UI = (() => {
 
     if (expandable) {
       card.addEventListener('click', e => {
-        if (e.target.closest('button')) return; // check/edit/delete/thumbs handle themselves
+        if (e.target.closest('button, a')) return; // buttons and links handle themselves
         expandedTasks.has(task.id) ? expandedTasks.delete(task.id) : expandedTasks.add(task.id);
         render();
       });
@@ -336,7 +357,7 @@ const UI = (() => {
 
     const text = document.createElement('div');
     text.className = 'task-text';
-    text.textContent = task.text;
+    renderTextWithLinks(text, task.text);
 
     const meta = document.createElement('div');
     meta.className = 'task-meta';
