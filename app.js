@@ -112,6 +112,13 @@ const Age = (() => {
     return d === 0 ? 'Today' : d === 1 ? '1 day old' : `${d} days old`;
   };
 
+  // Device-local timestamp, yy/mm/dd hh:mm (24h)
+  const stamp = ts => {
+    const d = new Date(ts);
+    const p = n => String(n).padStart(2, '0');
+    return `${p(d.getFullYear() % 100)}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
   function scheduleMidnightTick(onTick) {
     const now = new Date();
     const next = new Date(now);
@@ -140,7 +147,7 @@ const Age = (() => {
   const fingerprint = () =>
     Store.tasks.map(t => `${t.id}:${isOld(t) ? 'o' : 'n'}:${ageDays(t)}`).join('|');
 
-  return { ageDays, isOld, label, start };
+  return { ageDays, isOld, label, stamp, start };
 })();
 
 /* ----------------------------- Images ---------------------------- */
@@ -336,9 +343,15 @@ const UI = (() => {
     const age = document.createElement('span');
     age.className = 'age-chip';
     age.textContent = task.completedAt
-      ? `done ${new Date(task.completedAt).toLocaleDateString()}`
+      ? `done ${Age.stamp(task.completedAt)}`
       : Age.label(task);
     meta.appendChild(age);
+
+    const created = document.createElement('span');
+    created.className = 'stamp';
+    created.title = 'Created';
+    created.textContent = Age.stamp(task.createdAt);
+    meta.appendChild(created);
 
     if (task.images.length && !isOpen) {
       const chip = document.createElement('span');
