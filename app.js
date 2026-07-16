@@ -222,9 +222,16 @@ const Images = (() => {
    tombstones. Local storage stays the source for rendering, so the app
    is fully usable offline and reconciles when a connection returns.
 
+   Auth uses the OAuth redirect flow (no popups, no external script):
+   connect navigates to Google and straight back with a ~1h token that
+   is remembered on the device. When it expires, the app renews it with
+   a sub-second prompt=none redirect bounce — on load or when the tab
+   becomes visible — so after the one-time connect, sync stays on.
+   The composer draft is stashed in sessionStorage across the bounce.
+
    Requires a Google OAuth Client ID (free) whose authorized JavaScript
-   origin is the URL this app is served from. Set it below or paste it
-   once in the in-app Sync dialog. */
+   origin AND authorized redirect URI match the URL this app is served
+   from. Set it below or paste it once in the in-app Sync dialog. */
 
 const Sync = (() => {
   // OAuth Client ID (public by design — only works from the authorized origin)
@@ -233,8 +240,8 @@ const Sync = (() => {
   const FILE_NAME = 'finisher-data.json';
   const API = 'https://www.googleapis.com/drive/v3';
   const UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
+  const AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
 
-  let tokenClient = null;
   let accessToken = null;
   let fileId = null;
   let state = 'off';        // off | signedout | syncing | synced | error
@@ -243,43 +250,87 @@ const Sync = (() => {
   let applyingRemote = false;
   let onRemoteApplied = () => {};
   let onState = () => {};
+  let onBeforeRedirect = () => {};
 
   const clientId = () => Store.settings.driveClientId || DEFAULT_CLIENT_ID;
   const enabled = () => !!Store.settings.driveSyncOn;
+  const tokenValid = () => !!accessToken && Date.now() < (Store.settings.driveTokenExp || 0);
 
   function setState(s) { state = s; onState(state, lastSyncAt); }
 
-  function loadGis() {
-    if (window.google?.accounts?.oauth2) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://accounts.google.com/gsi/client';
-      s.onload = resolve;
-      s.onerror = () => reject(new Error('Could not load Google sign-in (are you offline, or does this host block external scripts?)'));
-      document.head.appendChild(s);
+  /* ---- auth: redirect flow ---- */
+
+  // Must exactly match an Authorized redirect URI on the OAuth client.
+  const redirectUri = () =>
+    location.origin + location.pathname.replace(/index\.html$/, '');
+
+  function authUrl(silent) {
+    const p = new URLSearchParams({
+      client_id: clientId(),
+      redirect_uri: redirectUri(),
+      response_type: 'token',
+      scope: SCOPE,
+      include_granted_scopes: 'true',
+      state: silent ? 'finisher-silent' : 'finisher-interactive'
     });
+    if (silent) p.set('prompt', 'none');
+    return `${AUTH}?${p}`;
   }
 
-  function requestToken(interactive) {
-    return new Promise((resolve, reject) => {
-      tokenClient = tokenClient || google.accounts.oauth2.initTokenClient({
-        client_id: clientId(), scope: SCOPE, callback: () => {}
-      });
-      tokenClient.callback = resp =>
-        resp && resp.access_token ? resolve(resp.access_token) : reject(new Error(resp?.error || 'Sign-in was cancelled'));
-      tokenClient.requestAccessToken({ prompt: interactive ? 'consent' : '' });
-    });
+  function goAuth(silent) {
+    onBeforeRedirect(); // stash the composer draft across the bounce
+    location.assign(authUrl(silent));
   }
 
-  async function api(url, opts = {}, retry = true) {
+  // Handle the return leg: token (or error) arrives in the URL fragment.
+  function consumeAuthResponse() {
+    if (!/access_token=|error=/.test(location.hash)) return null;
+    const h = new URLSearchParams(location.hash.slice(1));
+    if (!(h.get('state') || '').startsWith('finisher-')) return null; // not ours
+    history.replaceState(null, '', location.pathname + location.search);
+    return {
+      token: h.get('access_token'),
+      expiresIn: Number(h.get('expires_in')) || 3600,
+      error: h.get('error')
+    };
+  }
+
+  function adoptToken(token, expiresIn) {
+    accessToken = token;
+    Store.setSetting('driveToken', token);
+    Store.setSetting('driveTokenExp', Date.now() + (expiresIn - 60) * 1000);
+  }
+
+  function dropToken() {
+    accessToken = null;
+    Store.setSetting('driveToken', null);
+    Store.setSetting('driveTokenExp', 0);
+  }
+
+  // Renew the token without user interaction via a prompt=none bounce.
+  // Only after one successful redirect auth on this device (proves the
+  // redirect URI is registered), and rate-limited so a misbehaving
+  // response can never cause a redirect loop.
+  function maybeSilentReauth() {
+    if (!enabled() || !clientId() || !Store.settings.driveRedirectOk) {
+      setState(enabled() ? 'signedout' : 'off');
+      return;
+    }
+    const last = Number(sessionStorage.getItem('finisher.lastSilentAuth') || 0);
+    if (Date.now() - last < 60_000) { setState('signedout'); return; }
+    sessionStorage.setItem('finisher.lastSilentAuth', String(Date.now()));
+    setState('syncing');
+    goAuth(true);
+  }
+
+  /* ---- Drive API ---- */
+
+  async function api(url, opts = {}) {
     const res = await fetch(url, {
       ...opts,
       headers: { Authorization: `Bearer ${accessToken}`, ...(opts.headers || {}) }
     });
-    if (res.status === 401 && retry) {
-      accessToken = await requestToken(false); // silent refresh, then retry once
-      return api(url, opts, false);
-    }
+    if (res.status === 401) { dropToken(); throw new Error('auth-expired'); }
     if (!res.ok) throw new Error(`Drive API ${res.status}`);
     return res;
   }
@@ -313,6 +364,8 @@ const Sync = (() => {
       body: JSON.stringify(data)
     });
 
+  /* ---- merge + sync ---- */
+
   // Per-task merge: for each id keep whichever side edited it last.
   function merge(remoteTasks, localTasks) {
     const byId = new Map();
@@ -328,7 +381,7 @@ const Sync = (() => {
     JSON.stringify([...tasks].sort((a, b) => a.id < b.id ? -1 : 1));
 
   async function syncNow() {
-    if (!accessToken) return;
+    if (!tokenValid()) { maybeSilentReauth(); return; }
     setState('syncing');
     try {
       const id = await findFile() || await createFile();
@@ -336,7 +389,10 @@ const Sync = (() => {
       try {
         const remote = await download(id);
         if (Array.isArray(remote?.tasks)) remoteTasks = remote.tasks;
-      } catch { /* empty or unreadable file: treat as first sync */ }
+      } catch (err) {
+        if (err.message === 'auth-expired') throw err;
+        /* empty or unreadable file: treat as first sync */
+      }
 
       const merged = merge(remoteTasks, Store.tasks);
 
@@ -353,44 +409,68 @@ const Sync = (() => {
       setState('synced');
     } catch (err) {
       console.warn('Sync failed:', err);
-      setState('error');
+      // Expired token: quietly renew on the next natural moment (now if
+      // the tab is visible); other errors keep local-only and retry.
+      setState(err.message === 'auth-expired' ? 'signedout' : 'error');
+      if (err.message === 'auth-expired' && !document.hidden) maybeSilentReauth();
     }
   }
 
   // Local edits push after a short quiet period (each sync re-pulls first,
   // so racing edits from another device still merge safely).
   function notifyLocalChange() {
-    if (applyingRemote || !enabled() || !accessToken) return;
+    if (applyingRemote || !enabled() || !tokenValid()) return;
     clearTimeout(pushTimer);
     pushTimer = setTimeout(syncNow, 2500);
   }
 
-  async function connect(interactive) {
-    await loadGis();
-    accessToken = await requestToken(interactive);
-    Store.setSetting('driveSyncOn', true);
-    await syncNow();
+  // Interactive connect (from the Sync dialog): full redirect to Google.
+  function connect() {
+    goAuth(false);
   }
 
   function disable() {
     Store.setSetting('driveSyncOn', false);
-    accessToken = null;
+    Store.setSetting('driveRedirectOk', false);
+    dropToken();
     fileId = null;
     setState('off');
   }
 
-  function init(remoteAppliedCb, stateCb) {
+  function init(remoteAppliedCb, stateCb, beforeRedirectCb) {
     onRemoteApplied = remoteAppliedCb;
     onState = stateCb;
+    onBeforeRedirect = beforeRedirectCb || (() => {});
+
     document.addEventListener('finisher:saved', notifyLocalChange);
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && enabled() && accessToken) syncNow();
+      if (document.hidden || !enabled()) return;
+      if (tokenValid()) syncNow();
+      else maybeSilentReauth();
     });
-    setInterval(() => { if (enabled() && accessToken) syncNow(); }, 120_000);
+    setInterval(() => { if (enabled() && tokenValid()) syncNow(); }, 120_000);
 
+    // Returning from Google?
+    const resp = consumeAuthResponse();
+    if (resp) {
+      if (resp.token) {
+        adoptToken(resp.token, resp.expiresIn);
+        Store.setSetting('driveSyncOn', true);
+        Store.setSetting('driveRedirectOk', true);
+        syncNow();
+      } else {
+        // Silent renewal needs a real sign-in (Google session gone).
+        setState(enabled() ? 'signedout' : 'off');
+      }
+      return;
+    }
+
+    // Normal load: resume with the remembered token, renew it silently,
+    // or stay off until the user connects.
     if (enabled() && clientId()) {
-      // Re-attach silently on load; if Google needs a click, show "sign in".
-      connect(false).catch(() => setState('signedout'));
+      accessToken = Store.settings.driveToken || null;
+      if (tokenValid()) syncNow();
+      else maybeSilentReauth();
     } else {
       setState(enabled() ? 'signedout' : 'off');
     }
@@ -782,9 +862,9 @@ const UI = (() => {
     const at = lastSyncAt ? ` Last synced ${Age.stamp(lastSyncAt)}.` : '';
     const messages = {
       off: 'Sync is off. Your tasks stay on this device only.',
-      signedout: 'Sync is on, but this device isn’t signed in. Connect to resume syncing.',
+      signedout: 'Sync needs a quick sign-in on this device. Tap Connect — after that it reconnects by itself.',
       syncing: 'Syncing with Google Drive…',
-      synced: `Up to date with Google Drive.${at}`,
+      synced: `Up to date with Google Drive. Everything you enter saves and syncs automatically.${at}`,
       error: `Couldn’t reach Google Drive — will keep retrying. Your tasks are safe on this device.${at}`
     };
     els.syncStatus.textContent = messages[state] || '';
@@ -799,18 +879,40 @@ const UI = (() => {
     els.syncModal.showModal();
   }
 
-  async function syncConnectClicked() {
+  function syncConnectClicked() {
     const pasted = els.syncClientId.value.trim();
     if (pasted) Store.setSetting('driveClientId', pasted);
     if (!Sync.configured) {
       els.syncStatus.textContent = 'Paste your Google OAuth Client ID first (see README for the one-time setup).';
       return;
     }
-    try {
-      await Sync.connect(Sync.state !== 'synced' && Sync.state !== 'syncing');
-    } catch (err) {
-      els.syncStatus.textContent = `Couldn’t connect: ${err.message}`;
+    if (Sync.state === 'synced' || Sync.state === 'syncing') {
+      Sync.syncNow(); // already connected — just sync now
+      return;
     }
+    Sync.connect(); // navigates to Google and straight back
+  }
+
+  // The auth redirect briefly leaves the page; keep any half-typed task.
+  function stashDraft() {
+    if (els.newText.value.trim() || draftImages.length) {
+      sessionStorage.setItem('finisher.draft', JSON.stringify({
+        text: els.newText.value, urgency: draftUrgency, images: draftImages
+      }));
+    }
+  }
+
+  function restoreDraft() {
+    const raw = sessionStorage.getItem('finisher.draft');
+    if (!raw) return;
+    sessionStorage.removeItem('finisher.draft');
+    try {
+      const d = JSON.parse(raw);
+      els.newText.value = d.text || '';
+      draftImages = Array.isArray(d.images) ? d.images : [];
+      setDraftUrgency(d.urgency === 'high' ? 'high' : 'low');
+      renderDraftImages();
+    } catch { /* corrupt stash: ignore */ }
   }
 
   /* ---- archive drawer ---- */
@@ -908,10 +1010,11 @@ const UI = (() => {
 
     // Start the age engine (midnight tick + drift watchdog + wake-up hook)
     refreshAgeFingerprint = Age.start(render);
+    restoreDraft(); // bring back anything typed before an auth redirect
     render();
 
     // Start sync (no-op until connected in the ☁ dialog)
-    Sync.init(render, syncStateChanged);
+    Sync.init(render, syncStateChanged, stashDraft);
   }
 
   return { init };

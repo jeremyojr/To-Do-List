@@ -103,10 +103,17 @@ edit, and every 2 minutes.
    address.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID** →
    type **Web application** → under *Authorized JavaScript origins* add the
-   URL the app is served from (e.g. `https://<you>.github.io`) → Create →
-   copy the **Client ID**.
+   origin the app is served from (e.g. `https://<you>.github.io`), and under
+   *Authorized redirect URIs* add the app's full URL (e.g.
+   `https://<you>.github.io/To-Do-List/`) → Create → copy the **Client ID**.
 5. In the app, tap **☁ Sync**, paste the Client ID, and **Connect Google
-   Drive**. Repeat the connect step (sign-in only) once on each device.
+   Drive**. Repeat the connect step (sign-in only) once on each device —
+   after that each device reconnects automatically: the ~1h token is
+   remembered locally and silently renewed with a `prompt=none` redirect
+   bounce on load / tab focus.
+6. Recommended: on the OAuth consent screen, click **Publish app** (status
+   "In production"). Otherwise Google's testing mode expires the grant every
+   7 days and you'd have to re-consent weekly.
 
 The Client ID is not a secret — it only works from the origins you authorized.
 It can also be hardcoded as `DEFAULT_CLIENT_ID` in `app.js` so devices never
