@@ -54,6 +54,29 @@
     <div id="draft-images" class="draft-images" hidden></div>
   </section>
 
+  <!-- Filter & search (applies to the matrix AND the archive) -->
+  <section class="filterbar">
+    <input id="search-box" type="search" autocomplete="off"
+           placeholder='Search…  "exact phrase"  cat OR dog  -exclude' />
+    <div class="filter-dates">
+      <input id="filter-date" type="date" title="Show entries from this exact date" />
+      <select id="filter-month" title="Show entries from this month">
+        <option value="">Any month</option>
+        <option value="1">Jan</option><option value="2">Feb</option>
+        <option value="3">Mar</option><option value="4">Apr</option>
+        <option value="5">May</option><option value="6">Jun</option>
+        <option value="7">Jul</option><option value="8">Aug</option>
+        <option value="9">Sep</option><option value="10">Oct</option>
+        <option value="11">Nov</option><option value="12">Dec</option>
+      </select>
+      <select id="filter-year" title="Show entries from this year">
+        <option value="">Any year</option>
+      </select>
+      <button id="filter-clear" class="ghost-btn" hidden>✕ Clear</button>
+      <span id="filter-count" class="filter-count" hidden></span>
+    </div>
+  </section>
+
   <!-- The 2x2 Matrix -->
   <main class="matrix-wrap">
     <div class="y-axis" aria-hidden="true">

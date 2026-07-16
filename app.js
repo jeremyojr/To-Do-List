@@ -525,6 +525,12 @@ const UI = (() => {
     editSave: $('#edit-save'),
     lightbox: $('#lightbox'),
     lightboxImg: $('#lightbox-img'),
+    searchBox: $('#search-box'),
+    filterDate: $('#filter-date'),
+    filterMonth: $('#filter-month'),
+    filterYear: $('#filter-year'),
+    filterClear: $('#filter-clear'),
+    filterCount: $('#filter-count'),
     syncBtn: $('#sync-btn'),
     syncModal: $('#sync-modal'),
     syncStatus: $('#sync-status'),
@@ -546,13 +552,97 @@ const UI = (() => {
   const expandedQuads = new Set(); // quadrant keys, e.g. 'high-old'
   const expandedTasks = new Set(); // task ids
 
+  /* ---- filter & search (applies to matrix AND archive) ---- */
+
+  const view = { date: '', month: '', year: '' };
+  let queryClauses = []; // parsed boolean search, [] = no search
+
+  const viewActive = () =>
+    !!(view.date || view.month || view.year || queryClauses.length);
+
+  // Boolean query: bare terms AND together; uppercase OR separates
+  // alternatives; "quotes" match an exact phrase; a leading - excludes
+  // (works on words and phrases). Case-insensitive throughout.
+  function parseQuery(q) {
+    const clauses = [[]];
+    const re = /(-?)"([^"]*)"|(-?)(\S+)/g;
+    let m;
+    while ((m = re.exec(q))) {
+      if (m[2] === undefined && m[4] === 'OR') { clauses.push([]); continue; }
+      const neg = !!(m[1] || m[3]);
+      const term = (m[2] !== undefined ? m[2] : m[4]).toLowerCase().trim();
+      if (term) clauses[clauses.length - 1].push({ term, neg });
+    }
+    return clauses.filter(c => c.length);
+  }
+
+  function inPeriod(ts) {
+    const d = new Date(ts);
+    if (view.date) {
+      const [y, mo, day] = view.date.split('-').map(Number);
+      return d.getFullYear() === y && d.getMonth() === mo - 1 && d.getDate() === day;
+    }
+    if (view.month && d.getMonth() + 1 !== Number(view.month)) return false;
+    if (view.year && d.getFullYear() !== Number(view.year)) return false;
+    return true;
+  }
+
+  function taskMatchesView(task) {
+    if (view.date || view.month || view.year) {
+      // an entry belongs to a period if it was created OR completed then
+      if (!inPeriod(task.createdAt) && !(task.completedAt && inPeriod(task.completedAt))) return false;
+    }
+    if (queryClauses.length) {
+      const text = (task.text || '').toLowerCase();
+      if (!queryClauses.some(c => c.every(t => t.neg ? !text.includes(t.term) : text.includes(t.term)))) return false;
+    }
+    return true;
+  }
+
+  // Year dropdown offers exactly the years that appear in the data.
+  function refreshYearOptions() {
+    const years = new Set();
+    for (const t of Store.tasks) {
+      if (t.deleted) continue;
+      years.add(new Date(t.createdAt).getFullYear());
+      if (t.completedAt) years.add(new Date(t.completedAt).getFullYear());
+    }
+    if (view.year) years.add(Number(view.year));
+    const wanted = [...years].sort((a, b) => b - a);
+    const current = [...els.filterYear.options].slice(1).map(o => Number(o.value));
+    if (wanted.length === current.length && wanted.every((y, i) => y === current[i])) return;
+    els.filterYear.length = 1; // keep "Any year"
+    for (const y of wanted) els.filterYear.add(new Option(y, y));
+    els.filterYear.value = view.year;
+  }
+
+  function updateFilterStatus(activeN, archivedN) {
+    const on = viewActive();
+    els.filterClear.hidden = !on;
+    els.filterCount.hidden = !on;
+    if (on) els.filterCount.textContent = `${activeN} active · ${archivedN} archived match`;
+  }
+
+  function clearFilters() {
+    view.date = view.month = view.year = '';
+    queryClauses = [];
+    els.searchBox.value = '';
+    els.filterDate.value = '';
+    els.filterMonth.value = '';
+    els.filterYear.value = '';
+    render();
+  }
+
   /* ---- rendering ---- */
 
   function render() {
     const ctx = Store.settings.context;
     const live = Store.tasks.filter(t => !t.deleted && t.context === ctx);
-    const active = live.filter(t => !t.completedAt);
-    const archived = live.filter(t => t.completedAt);
+    const shown = viewActive() ? live.filter(taskMatchesView) : live;
+    const active = shown.filter(t => !t.completedAt);
+    const archived = shown.filter(t => t.completedAt);
+    refreshYearOptions();
+    updateFilterStatus(active.length, archived.length);
 
     // Oldest first inside each quadrant — the longest-waiting task tops the pile.
     active.sort((a, b) => a.createdAt - b.createdAt);
@@ -582,7 +672,7 @@ const UI = (() => {
       expandedQuads.delete(key);
       const empty = document.createElement('div');
       empty.className = 'quad-empty';
-      empty.textContent = 'Nothing here ✨';
+      empty.textContent = viewActive() ? 'No matches 🔍' : 'Nothing here ✨';
       body.appendChild(empty);
       return;
     }
@@ -753,11 +843,11 @@ const UI = (() => {
 
   function renderArchive(archived) {
     els.archiveBody.textContent = '';
-    els.archiveCtxLabel.textContent = `· ${Store.settings.context}`;
+    els.archiveCtxLabel.textContent = `· ${Store.settings.context}` + (viewActive() ? ' · filtered' : '');
     if (!archived.length) {
       const empty = document.createElement('div');
       empty.className = 'quad-empty';
-      empty.textContent = 'No completed tasks yet.';
+      empty.textContent = viewActive() ? 'No matches 🔍' : 'No completed tasks yet.';
       els.archiveBody.appendChild(empty);
       return;
     }
@@ -944,6 +1034,34 @@ const UI = (() => {
       Store.setSetting('oldThresholdDays', Number(els.threshold.value));
       render();
     });
+
+    // Filter & search toolbar
+    let searchTimer = null;
+    els.searchBox.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        queryClauses = parseQuery(els.searchBox.value);
+        render();
+      }, 200);
+    });
+    els.filterDate.addEventListener('change', () => {
+      view.date = els.filterDate.value;
+      if (view.date) { // exact date supersedes month/year
+        view.month = view.year = '';
+        els.filterMonth.value = '';
+        els.filterYear.value = '';
+      }
+      render();
+    });
+    const monthYearChanged = () => {
+      view.month = els.filterMonth.value;
+      view.year = els.filterYear.value;
+      if (view.month || view.year) { view.date = ''; els.filterDate.value = ''; }
+      render();
+    };
+    els.filterMonth.addEventListener('change', monthYearChanged);
+    els.filterYear.addEventListener('change', monthYearChanged);
+    els.filterClear.addEventListener('click', clearFilters);
 
     els.urgLow.addEventListener('click', () => setDraftUrgency('low'));
     els.urgHigh.addEventListener('click', () => setDraftUrgency('high'));

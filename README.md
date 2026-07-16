@@ -37,6 +37,12 @@ any browser, or host the folder on any static host (GitHub Pages works great).
   task's edit dialog) to attach it. Images are downscaled to ≤1024px JPEG
   before storage to respect the localStorage budget. Click a thumbnail for a
   full-size lightbox.
+- **Filter & boolean search** — one toolbar filters the matrix and the
+  Archive drawer together. Filter by exact date, month, and/or year (an entry
+  matches if it was created or completed in that period). Search supports
+  `"exact phrases"`, implicit AND between terms, uppercase `OR`, and
+  `-exclusions` (on words or phrases), all case-insensitive — e.g.
+  `report OR "design mock" -draft`.
 - **Complete / reinstate / delete** — the ✓ ring crosses a task off and moves
   it to the Archive drawer, where it can be reinstated, deleted individually,
   or cleared in bulk (per context).
