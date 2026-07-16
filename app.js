@@ -1,5 +1,5 @@
 /* ============================================================
-   Matrix To-Do — app logic
+   Finisher — app logic
    Modules: Store (persistence) · Age (time math + timers) ·
    Images (paste capture + compression) · UI (rendering)
    ============================================================ */

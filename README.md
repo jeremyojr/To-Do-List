@@ -1,4 +1,4 @@
-# Matrix To-Do
+# Finisher
 
 A cross-platform to-do list built around a **2×2 Urgency × Age matrix**. Tasks
 automatically drift across the age axis as days pass — the app makes the cost
@@ -11,8 +11,8 @@ any browser, or host the folder on any static host (GitHub Pages works great).
 
 |                | **New**                   | **Old**                          |
 | -------------- | ------------------------- | -------------------------------- |
-| **High urgency** | 🔥 Urgent · New — just landed | 🚨 Urgent · Aging — pulses red, do first |
-| **Low urgency**  | 🌱 Chill · New — no rush      | 🪨 Chill · Aging — finish or drop      |
+| **High urgency** | 🔥 Important · New — just landed | 🚨 Important · Aging — pulses red, do first |
+| **Low urgency**  | 🌱 Regular · New — no rush      | 🪨 Regular · Aging — finish or drop      |
 
 - **Y-axis (urgency)** is chosen by you per task (Low / High), editable any time.
 - **X-axis (age)** is computed: a task crosses from *New* to *Old* once it is
@@ -38,7 +38,7 @@ any browser, or host the folder on any static host (GitHub Pages works great).
   it to the Archive drawer, where it can be reinstated, deleted individually,
   or cleared in bulk (per context).
 - **Responsive** — full 2×2 matrix on laptop/tablet; on phones the quadrants
-  stack in priority order (Urgent·Aging first).
+  stack in priority order (Important·Aging first).
 - **Persistence** — everything lives in `localStorage` under one key
   (`matrixTodo.v1`); nothing leaves your browser.
 

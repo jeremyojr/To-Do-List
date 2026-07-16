@@ -1,5 +1,5 @@
 /* ============================================================
-   Matrix To-Do — styles
+   Finisher — styles
    Light theme by default, dark theme via prefers-color-scheme.
    ============================================================ */
 
@@ -66,7 +66,19 @@ button { font: inherit; cursor: pointer; }
 }
 
 .brand { display: flex; align-items: center; gap: 8px; }
-.brand-mark { font-size: 22px; color: var(--accent); }
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  user-select: none;
+}
 .brand h1 { font-size: 18px; margin: 0; letter-spacing: -0.02em; }
 
 /* Context switcher — sliding pill */
