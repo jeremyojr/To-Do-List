@@ -42,26 +42,29 @@
 
   <!-- Composer -->
   <section class="composer">
-    <div class="composer-row">
-      <input id="new-task-text" type="text" autocomplete="off"
-             placeholder="Add a task… (paste an image here to attach it)" />
-      <button id="details-toggle" class="details-toggle" title="Add details (paragraphs, bullets…)">📝</button>
-      <div class="urgency-pick" role="radiogroup" aria-label="Urgency">
-        <button id="urg-low"  class="urg-btn selected" role="radio" aria-checked="true">Low</button>
-        <button id="urg-high" class="urg-btn" role="radio" aria-checked="false">High 🔥</button>
+    <div class="composer-box">
+      <div class="composer-row">
+        <input id="new-task-text" type="text" autocomplete="off"
+               placeholder="Add a task… (paste an image here to attach it)" />
+        <button id="details-toggle" class="details-toggle" title="Add details (paragraphs, bullets…)">▾</button>
+        <div class="urgency-pick" role="radiogroup" aria-label="Urgency">
+          <button id="urg-low"  class="urg-btn selected" role="radio" aria-checked="true">Low</button>
+          <button id="urg-high" class="urg-btn" role="radio" aria-checked="false">High 🔥</button>
+        </div>
+        <button id="add-task" class="add-btn">Add</button>
       </div>
-      <button id="add-task" class="add-btn">Add</button>
+      <div id="task-details" class="details-editor" contenteditable="true" hidden
+           data-placeholder="Details… Enter starts a new paragraph. Bullets and numbering survive pasting from other sites."></div>
+      <div id="draft-images" class="draft-images" hidden></div>
     </div>
-    <div id="task-details" class="details-editor" contenteditable="true" hidden
-         data-placeholder="Details… Enter starts a new paragraph. Bullets and numbering survive pasting from other sites."></div>
-    <div id="draft-images" class="draft-images" hidden></div>
   </section>
 
   <!-- Filter & search (applies to the matrix AND the archive) -->
   <section class="filterbar">
-    <input id="search-box" type="search" autocomplete="off"
-           placeholder='Search…  "exact phrase"  cat OR dog  -exclude' />
-    <div class="filter-dates">
+    <input id="search-box" type="search" autocomplete="off" placeholder="Search"
+           title='Boolean search: "exact phrase" · cat OR dog · NOT word' />
+    <button id="filter-toggle" class="filter-toggle" title="Filter by date, month or year">📅 Filter</button>
+    <div id="filter-panel" class="filter-dates" hidden>
       <input id="filter-date" type="date" title="Show entries from this exact date" />
       <select id="filter-month" title="Show entries from this month">
         <option value="">Any month</option>
@@ -76,8 +79,8 @@
         <option value="">Any year</option>
       </select>
       <button id="filter-clear" class="ghost-btn" hidden>✕ Clear</button>
-      <span id="filter-count" class="filter-count" hidden></span>
     </div>
+    <span id="filter-count" class="filter-count" hidden></span>
   </section>
 
   <!-- The 2x2 Matrix -->

@@ -533,6 +533,8 @@ const UI = (() => {
     filterDate: $('#filter-date'),
     filterMonth: $('#filter-month'),
     filterYear: $('#filter-year'),
+    filterToggle: $('#filter-toggle'),
+    filterPanel: $('#filter-panel'),
     filterClear: $('#filter-clear'),
     filterCount: $('#filter-count'),
     syncBtn: $('#sync-btn'),
@@ -565,17 +567,20 @@ const UI = (() => {
     !!(view.date || view.month || view.year || queryClauses.length);
 
   // Boolean query: bare terms AND together; uppercase OR separates
-  // alternatives; "quotes" match an exact phrase; a leading - excludes
-  // (works on words and phrases). Case-insensitive throughout.
+  // alternatives; "quotes" match an exact phrase; NOT excludes the
+  // word or phrase that follows it. Case-insensitive throughout.
   function parseQuery(q) {
     const clauses = [[]];
-    const re = /(-?)"([^"]*)"|(-?)(\S+)/g;
+    let negNext = false;
+    const re = /"([^"]*)"|(\S+)/g;
     let m;
     while ((m = re.exec(q))) {
-      if (m[2] === undefined && m[4] === 'OR') { clauses.push([]); continue; }
-      const neg = !!(m[1] || m[3]);
-      const term = (m[2] !== undefined ? m[2] : m[4]).toLowerCase().trim();
-      if (term) clauses[clauses.length - 1].push({ term, neg });
+      const word = m[2];
+      if (word === 'OR') { clauses.push([]); negNext = false; continue; }
+      if (word === 'NOT') { negNext = true; continue; }
+      const term = (m[1] !== undefined ? m[1] : word).toLowerCase().trim();
+      if (term) clauses[clauses.length - 1].push({ term, neg: negNext });
+      negNext = false;
     }
     return clauses.filter(c => c.length);
   }
@@ -625,6 +630,8 @@ const UI = (() => {
     els.filterClear.hidden = !on;
     els.filterCount.hidden = !on;
     if (on) els.filterCount.textContent = `${activeN} active · ${archivedN} archived match`;
+    // the collapsed filter button signals when a period filter is live
+    els.filterToggle.classList.toggle('active', !!(view.date || view.month || view.year));
   }
 
   function clearFilters() {
@@ -855,19 +862,18 @@ const UI = (() => {
       meta.appendChild(chip);
     }
 
-    if (task.details && !isOpen) {
-      const chip = document.createElement('span');
-      chip.className = 'img-chip';
-      chip.textContent = '📝';
-      chip.title = 'Has details — tap to expand';
-      meta.appendChild(chip);
-    }
-
     if (expandable) {
-      const caret = document.createElement('span');
-      caret.className = 'expand-chip';
-      caret.textContent = isOpen ? '▴ less' : '▾ more';
-      meta.appendChild(caret);
+      const arrow = document.createElement('button');
+      arrow.className = 'expand-btn';
+      arrow.textContent = isOpen ? '▴' : '▾';
+      arrow.title = isOpen ? 'Collapse' : 'Expand';
+      arrow.setAttribute('aria-label', arrow.title);
+      arrow.setAttribute('aria-expanded', String(isOpen));
+      arrow.addEventListener('click', () => {
+        expandedTasks.has(task.id) ? expandedTasks.delete(task.id) : expandedTasks.add(task.id);
+        render();
+      });
+      meta.appendChild(arrow);
     }
 
     main.append(text);
@@ -988,6 +994,7 @@ const UI = (() => {
       els.taskDetails.innerHTML = '';
       els.taskDetails.hidden = true;
       els.detailsToggle.classList.remove('active');
+      els.detailsToggle.textContent = '\u25be';
       draftImages = [];
       renderDraftImages();
       setDraftUrgency('low');
@@ -1108,6 +1115,7 @@ const UI = (() => {
         els.taskDetails.appendChild(sanitizeRich(d.details));
         els.taskDetails.hidden = !els.taskDetails.textContent.trim();
         els.detailsToggle.classList.toggle('active', !els.taskDetails.hidden);
+        els.detailsToggle.textContent = els.taskDetails.hidden ? '\u25be' : '\u25b4';
       }
       draftImages = Array.isArray(d.images) ? d.images : [];
       setDraftUrgency(d.urgency === 'high' ? 'high' : 'low');
@@ -1146,6 +1154,9 @@ const UI = (() => {
     });
 
     // Filter & search toolbar
+    els.filterToggle.addEventListener('click', () => {
+      els.filterPanel.hidden = !els.filterPanel.hidden;
+    });
     let searchTimer = null;
     els.searchBox.addEventListener('input', () => {
       clearTimeout(searchTimer);
@@ -1187,6 +1198,7 @@ const UI = (() => {
     els.detailsToggle.addEventListener('click', () => {
       els.taskDetails.hidden = !els.taskDetails.hidden;
       els.detailsToggle.classList.toggle('active', !els.taskDetails.hidden);
+      els.detailsToggle.textContent = els.taskDetails.hidden ? '\u25be' : '\u25b4';
       if (!els.taskDetails.hidden) els.taskDetails.focus();
     });
     // Images pasted into details attach to the task; rich text is

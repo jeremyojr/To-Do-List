@@ -26,14 +26,16 @@ any browser, or host the folder on any static host (GitHub Pages works great).
   more, a "+N more" bar appears; tap it (or the quadrant header) to expand to
   the full list, tap again to collapse. The header badge always shows the true
   count.
-- **Rich-text details** — the 📝 button in the composer opens a details box
-  where Enter starts a new paragraph and formatting pasted from other sites
+- **Rich-text details** — the ▾ arrow in the composer opens a details box
+  contiguous with the title field
+ , where Enter starts a new paragraph and formatting pasted from other sites
   (bullets, numbering, bold, links) transposes intact. Details are stored as
   sanitized HTML (small tag whitelist, all attributes stripped, unsafe links
   neutralized — at paste time and again at render). On the grid, details stay
   hidden until you tap the task; search looks inside them too.
 - **Compact, tappable cards** — tasks with attached images, details, or long
-  text render compact (2-line clamp, `📷 n` / `📝` chips). Tap the card to
+  text render compact (2-line clamp, `📷 n` chip, ▾ arrow button). Tap the card or its
+  arrow to
   expand it and see the full text, details, and image thumbnails; tap again
   to collapse. Buttons, links, and the details block (kept selectable for
   copying) never trigger the toggle.
@@ -44,12 +46,12 @@ any browser, or host the folder on any static host (GitHub Pages works great).
   task's edit dialog) to attach it. Images are downscaled to ≤1024px JPEG
   before storage to respect the localStorage budget. Click a thumbnail for a
   full-size lightbox.
-- **Filter & boolean search** — one toolbar filters the matrix and the
-  Archive drawer together. Filter by exact date, month, and/or year (an entry
-  matches if it was created or completed in that period). Search supports
-  `"exact phrases"`, implicit AND between terms, uppercase `OR`, and
-  `-exclusions` (on words or phrases), all case-insensitive — e.g.
-  `report OR "design mock" -draft`.
+- **Filter & boolean search** — a compact search box plus a collapsed
+  **📅 Filter** button (expands to exact-date / month / year controls; an
+  entry matches if it was created or completed in that period) filter the
+  matrix and the Archive drawer together. Search supports `"exact phrases"`,
+  implicit AND between terms, uppercase `OR`, and `NOT` before a word or
+  phrase, all case-insensitive — e.g. `report OR "design mock" NOT draft`.
 - **Complete / reinstate / delete** — the ✓ ring crosses a task off and moves
   it to the Archive drawer, where it can be reinstated, deleted individually,
   or cleared in bulk (per context).

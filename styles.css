@@ -171,14 +171,18 @@ button { font: inherit; cursor: pointer; }
   padding: 0 20px;
 }
 
-.composer-row {
-  display: flex;
-  gap: 10px;
+.composer-box {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 10px;
   box-shadow: var(--shadow);
+}
+.composer-box:focus-within { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.composer-row {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
 }
 
 #new-task-text {
@@ -222,21 +226,21 @@ button { font: inherit; cursor: pointer; }
   flex-wrap: wrap;
 }
 
-/* Details toggle in the composer row */
+/* Details toggle in the composer row: ▾ closed / ▴ open */
 .details-toggle {
   border: none;
   background: transparent;
+  color: var(--text-dim);
   border-radius: 10px;
   width: 38px;
-  font-size: 16px;
+  font-size: 18px;
   flex: none;
 }
-.details-toggle:hover { background: var(--surface-2); }
-.details-toggle.active { background: var(--surface-2); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.details-toggle:hover { background: var(--surface-2); color: var(--text); }
+.details-toggle.active { color: var(--accent); }
 
 /* Rich-text details editor (composer + edit dialog) */
 .details-editor {
-  margin-top: 10px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -249,6 +253,17 @@ button { font: inherit; cursor: pointer; }
   color: var(--text);
 }
 .details-editor:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+/* Inside the composer box: contiguous with the title row */
+.composer-box .details-editor {
+  border: none;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: transparent;
+  min-height: 64px;
+}
+.composer-box .details-editor:focus { outline: none; }
+.composer-box .draft-images { padding: 0 12px 10px; }
 .details-editor:empty::before {
   content: attr(data-placeholder);
   color: var(--text-dim);
@@ -292,7 +307,7 @@ button { font: inherit; cursor: pointer; }
 }
 
 #search-box {
-  flex: 1 1 240px;
+  flex: 0 1 200px;
   min-width: 0;
   font: inherit;
   font-size: 13px;
@@ -300,9 +315,22 @@ button { font: inherit; cursor: pointer; }
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 9px 12px;
+  padding: 7px 12px;
 }
 #search-box:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.filter-toggle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+.filter-toggle:hover { color: var(--text); }
+.filter-toggle.active { color: var(--accent); border-color: var(--accent); }
 
 .filter-dates { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
@@ -321,6 +349,7 @@ button { font: inherit; cursor: pointer; }
 
 @media (max-width: 760px) {
   .filterbar { padding: 0 14px; }
+  #search-box { flex: 1 1 120px; }
 }
 
 /* ---------- Matrix layout ---------- */
@@ -509,7 +538,21 @@ button { font: inherit; cursor: pointer; }
   padding: 2px 8px;
 }
 
-.expand-chip { font-size: 11px; font-weight: 600; color: var(--accent); }
+.expand-btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--accent);
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+}
+.expand-btn:hover { border-color: var(--accent); }
 
 .stamp { font-size: 10px; color: var(--text-dim); letter-spacing: .02em; }
 
