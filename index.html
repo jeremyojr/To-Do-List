@@ -92,22 +92,28 @@
     </div>
 
     <div class="quads">
-      <section class="quad" id="quad-high-new" data-urgency="high" data-age="new">
-        <header><h2>🔥 Important · New <span class="quad-count" hidden></span></h2><span class="quad-hint">just landed, hot</span><span class="quad-caret" aria-hidden="true">▴</span></header>
-        <div class="quad-body"></div>
-      </section>
-      <section class="quad" id="quad-high-old" data-urgency="high" data-age="old">
-        <header><h2>🚨 Important · Aging <span class="quad-count" hidden></span></h2><span class="quad-hint">do these first</span><span class="quad-caret" aria-hidden="true">▴</span></header>
-        <div class="quad-body"></div>
-      </section>
-      <section class="quad" id="quad-low-new" data-urgency="low" data-age="new">
-        <header><h2>🌱 Regular · New <span class="quad-count" hidden></span></h2><span class="quad-hint">fresh, no rush</span><span class="quad-caret" aria-hidden="true">▴</span></header>
-        <div class="quad-body"></div>
-      </section>
-      <section class="quad" id="quad-low-old" data-urgency="low" data-age="old">
-        <header><h2>🪨 Regular · Aging <span class="quad-count" hidden></span></h2><span class="quad-hint">lingering — finish or drop</span><span class="quad-caret" aria-hidden="true">▴</span></header>
-        <div class="quad-body"></div>
-      </section>
+      <!-- columns stack independently, so folding a top quadrant lets
+           the one below it slide up (left = New, right = Old) -->
+      <div class="quad-col">
+        <section class="quad" id="quad-high-new" data-urgency="high" data-age="new">
+          <header><h2>🔥 Important · New <span class="quad-count" hidden></span></h2><span class="quad-hint">just landed, hot</span><span class="quad-caret" aria-hidden="true">▴</span></header>
+          <div class="quad-body"></div>
+        </section>
+        <section class="quad" id="quad-low-new" data-urgency="low" data-age="new">
+          <header><h2>🌱 Regular · New <span class="quad-count" hidden></span></h2><span class="quad-hint">fresh, no rush</span><span class="quad-caret" aria-hidden="true">▴</span></header>
+          <div class="quad-body"></div>
+        </section>
+      </div>
+      <div class="quad-col">
+        <section class="quad" id="quad-high-old" data-urgency="high" data-age="old">
+          <header><h2>🚨 Important · Aging <span class="quad-count" hidden></span></h2><span class="quad-hint">do these first</span><span class="quad-caret" aria-hidden="true">▴</span></header>
+          <div class="quad-body"></div>
+        </section>
+        <section class="quad" id="quad-low-old" data-urgency="low" data-age="old">
+          <header><h2>🪨 Regular · Aging <span class="quad-count" hidden></span></h2><span class="quad-hint">lingering — finish or drop</span><span class="quad-caret" aria-hidden="true">▴</span></header>
+          <div class="quad-body"></div>
+        </section>
+      </div>
     </div>
 
     <div class="x-axis" aria-hidden="true">

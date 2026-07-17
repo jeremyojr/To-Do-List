@@ -396,10 +396,17 @@ button { font: inherit; cursor: pointer; }
   grid-area: quads;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  /* each row sizes to its own content so one busy quadrant
-     doesn't stretch the other row's quadrants */
-  grid-template-rows: auto auto; /* .quad min-height provides the floor */
   gap: 14px;
+  align-items: start;
+}
+
+/* Each age column stacks its two quadrants independently, so folding
+   the top one lets the one below slide up with no gap */
+.quad-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
 }
 
 .quad {
@@ -443,7 +450,7 @@ button { font: inherit; cursor: pointer; }
 
 .quad-caret { font-size: 12px; color: var(--text-dim); flex: none; }
 
-.quad.collapsed { min-height: 0; align-self: start; }
+.quad.collapsed { min-height: 0; }
 .quad.collapsed .quad-body { display: none; }
 
 .quad-body {
@@ -760,7 +767,9 @@ button { font: inherit; cursor: pointer; }
   }
   .y-axis, .x-axis { display: none; }
 
-  .quads { grid-template-columns: 1fr; grid-template-rows: none; }
+  .quads { grid-template-columns: 1fr; }
+  /* dissolve the columns so the priority order below applies */
+  .quad-col { display: contents; }
   .quad { min-height: 0; }
   .quad-body { overflow: visible; }
 
