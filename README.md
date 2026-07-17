@@ -27,17 +27,16 @@ any browser, or host the folder on any static host (GitHub Pages works great).
   the full list, tap again to collapse. The header badge always shows the true
   count.
 - **Rich-text details** — the ▾ arrow in the composer opens a details box
-  contiguous with the title field
- , where Enter starts a new paragraph and formatting pasted from other sites
+  contiguous with the title field, where Enter starts a new paragraph and
+  formatting pasted from other sites
   (bullets, numbering, bold, links) transposes intact. Details are stored as
   sanitized HTML (small tag whitelist, all attributes stripped, unsafe links
   neutralized — at paste time and again at render). On the grid, details stay
   hidden until you tap the task; search looks inside them too.
 - **Compact, tappable cards** — tasks with attached images, details, or long
-  text render compact (2-line clamp, `📷 n` chip, ▾ arrow button). Tap the card or its
-  arrow to
-  expand it and see the full text, details, and image thumbnails; tap again
-  to collapse. Buttons, links, and the details block (kept selectable for
+  text render compact (2-line clamp, `📷 n` chip, ▾ arrow button). Tap the
+  card or its arrow to expand it and see the full text, details, and image
+  thumbnails; tap again to collapse. Buttons, links, and the details block (kept selectable for
   copying) never trigger the toggle.
 - **Clickable links** — any URL in a task's text (https://… or www.…) becomes
   a tappable link that opens in a new tab; tapping a link never toggles the
