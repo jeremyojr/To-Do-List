@@ -444,19 +444,22 @@ button { font: inherit; cursor: pointer; }
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  /* fixed card palette in both themes: blue card, black bold task text,
-     grey timestamp */
-  background: #2f6bff;
-  border: 1px solid rgba(255, 255, 255, .28);
+  /* fixed card palette in both themes: soft neumorphic light-blue card,
+     dark bold task text, grey timestamp */
+  background: #a0d2ff;
+  border: none;
   border-left: 3px solid var(--qc);
-  border-radius: 10px;
-  padding: 10px;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 6px 6px 14px rgba(31, 42, 56, .22),
+              -6px -6px 14px rgba(255, 255, 255, .65);
   animation: card-in .25s ease;
 }
 
 .task-card.dragging {
-  opacity: .7;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
+  opacity: .8;
+  box-shadow: 10px 12px 28px rgba(31, 42, 56, .38),
+              -6px -6px 14px rgba(255, 255, 255, .5);
 }
 
 .drag-handle {
@@ -466,7 +469,7 @@ button { font: inherit; cursor: pointer; }
   place-items: center;
   width: 16px;
   margin-left: -4px;
-  color: rgba(255, 255, 255, .65);
+  color: rgba(31, 42, 56, .55);
   font-size: 13px;
   cursor: grab;
   touch-action: none;
@@ -494,11 +497,14 @@ button { font: inherit; cursor: pointer; }
 
 .task-check {
   flex: none;
-  width: 22px; height: 22px;
+  width: 24px; height: 24px;
   margin-top: 1px;
-  border: 2px solid rgba(255, 255, 255, .85);
+  border: none;
   border-radius: 999px;
-  background: transparent;
+  /* soft neumorphic button raised out of the card surface */
+  background: #a0d2ff;
+  box-shadow: 3px 3px 7px rgba(31, 42, 56, .3),
+              -3px -3px 7px rgba(255, 255, 255, .85);
   color: transparent;
   font-size: 13px;
   line-height: 1;
@@ -506,16 +512,21 @@ button { font: inherit; cursor: pointer; }
   place-items: center;
   transition: all .15s;
 }
-.task-check:hover { border-color: var(--q-low-new); color: var(--q-low-new); }
-.task-card.done .task-check { background: var(--q-low-new); border-color: var(--q-low-new); color: #fff; }
+.task-check:hover { color: var(--q-low-new); }
+.task-check:active { box-shadow: inset 2px 2px 5px rgba(31, 42, 56, .3), inset -2px -2px 5px rgba(255, 255, 255, .7); }
+.task-card.done .task-check {
+  color: #14733f;
+  box-shadow: inset 2px 2px 5px rgba(31, 42, 56, .3),
+              inset -2px -2px 5px rgba(255, 255, 255, .7);
+}
 
 .task-main { flex: 1; min-width: 0; }
 
-.task-text { font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; color: #000; font-weight: 700; }
+.task-text { font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; color: #1f2a38; font-weight: 700; }
 
-.task-text a { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+.task-text a { color: #1a56c4; text-decoration: underline; text-underline-offset: 2px; }
 .task-text a:hover { opacity: .85; }
-.task-card.done .task-text a { color: rgba(255, 255, 255, .8); }
+.task-card.done .task-text a { color: rgba(26, 86, 196, .7); }
 
 /* Compact cards clamp long text; tap to expand */
 .task-card.expandable { cursor: pointer; }
@@ -525,15 +536,15 @@ button { font: inherit; cursor: pointer; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.task-card.done .task-text { text-decoration: line-through; color: rgba(0, 0, 0, .55); }
+.task-card.done .task-text { text-decoration: line-through; color: rgba(31, 42, 56, .55); }
 
 .task-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 
 .age-chip, .img-chip {
   font-size: 11px;
   font-weight: 600;
-  color: #444;
-  background: #fff;
+  color: #3a485a;
+  background: rgba(255, 255, 255, .75);
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 2px 8px;
@@ -542,9 +553,10 @@ button { font: inherit; cursor: pointer; }
 .edit-modal .age-chip { color: var(--text-dim); background: var(--surface-2); border-color: var(--line); }
 
 .expand-btn {
-  border: 1px solid transparent;
-  background: #fff;
-  color: #2f6bff;
+  border: none;
+  background: #a0d2ff;
+  box-shadow: 2px 2px 5px rgba(31, 42, 56, .3), -2px -2px 5px rgba(255, 255, 255, .85);
+  color: #1f2a38;
   border-radius: 999px;
   width: 22px;
   height: 22px;
@@ -555,9 +567,9 @@ button { font: inherit; cursor: pointer; }
   place-items: center;
   margin-left: auto;
 }
-.expand-btn:hover { border-color: rgba(255, 255, 255, .8); }
+.expand-btn:hover { color: #1a56c4; }
 
-.stamp { font-size: 10px; color: #d9dfec; letter-spacing: .02em; }
+.stamp { font-size: 10px; color: #5f6f80; letter-spacing: .02em; }
 
 /* "Show all / show fewer" bar when a quadrant holds more than the cap */
 .more-bar {
@@ -578,10 +590,12 @@ button { font: inherit; cursor: pointer; }
   line-height: 1.5;
   margin: 6px 0 4px;
   padding: 8px 10px;
-  background: #fff;
-  color: #000;
-  border: 1px solid rgba(0, 0, 0, .08);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, .8);
+  color: #1f2a38;
+  border: none;
+  border-radius: 10px;
+  box-shadow: inset 2px 2px 5px rgba(31, 42, 56, .12),
+              inset -2px -2px 5px rgba(255, 255, 255, .8);
   overflow-wrap: anywhere;
   cursor: auto;
   user-select: text;
@@ -620,15 +634,15 @@ button { font: inherit; cursor: pointer; }
 .icon-btn {
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, .85);
+  color: rgba(31, 42, 56, .6);
   border-radius: 8px;
   width: 28px; height: 28px;
   font-size: 14px;
   display: grid;
   place-items: center;
 }
-.icon-btn:hover { background: rgba(255, 255, 255, .18); color: #fff; }
-.icon-btn.delete:hover { color: #ffb3b6; }
+.icon-btn:hover { background: rgba(255, 255, 255, .35); color: #1f2a38; }
+.icon-btn.delete:hover { color: var(--danger); }
 
 /* ---------- Archive drawer ---------- */
 
