@@ -278,7 +278,7 @@ button { font: inherit; cursor: pointer; }
 .task-details ul, .task-details ol { margin: 4px 0 8px; padding-left: 22px; }
 .details-editor li, .task-details li { margin: 2px 0; }
 .details-editor blockquote, .task-details blockquote {
-  border-left: 3px solid var(--line);
+  border-left: 3px solid rgba(0, 0, 0, .15);
   margin: 6px 0;
   padding-left: 10px;
   color: var(--text-dim);
@@ -358,42 +358,9 @@ button { font: inherit; cursor: pointer; }
   max-width: 1100px;
   margin: 16px auto 40px;
   padding: 0 20px;
-  display: grid;
-  grid-template-columns: 34px 1fr;
-  grid-template-rows: 1fr 26px;
-  grid-template-areas:
-    "y quads"
-    ".  x";
-  gap: 6px;
 }
-
-.y-axis {
-  grid-area: y;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--text-dim);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 8px 0;
-}
-.y-axis .axis-name { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .12em; text-transform: uppercase; }
-
-.x-axis {
-  grid-area: x;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--text-dim);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 0 8px;
-}
-.x-axis .axis-name { letter-spacing: .12em; text-transform: uppercase; }
 
 .quads {
-  grid-area: quads;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
@@ -477,13 +444,35 @@ button { font: inherit; cursor: pointer; }
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
+  /* fixed card palette in both themes: blue card, black bold task text,
+     grey timestamp */
+  background: #2f6bff;
+  border: 1px solid rgba(255, 255, 255, .28);
   border-left: 3px solid var(--qc);
   border-radius: 10px;
   padding: 10px;
   animation: card-in .25s ease;
 }
+
+.task-card.dragging {
+  opacity: .7;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
+}
+
+.drag-handle {
+  flex: none;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  margin-left: -4px;
+  color: rgba(255, 255, 255, .65);
+  font-size: 13px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.drag-handle:active { cursor: grabbing; }
 
 @keyframes card-in {
   from { opacity: 0; transform: translateY(4px); }
@@ -507,7 +496,7 @@ button { font: inherit; cursor: pointer; }
   flex: none;
   width: 22px; height: 22px;
   margin-top: 1px;
-  border: 2px solid var(--text-dim);
+  border: 2px solid rgba(255, 255, 255, .85);
   border-radius: 999px;
   background: transparent;
   color: transparent;
@@ -522,11 +511,11 @@ button { font: inherit; cursor: pointer; }
 
 .task-main { flex: 1; min-width: 0; }
 
-.task-text { font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+.task-text { font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; color: #000; font-weight: 700; }
 
-.task-text a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
-.task-text a:hover { opacity: .8; }
-.task-card.done .task-text a { color: var(--text-dim); }
+.task-text a { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+.task-text a:hover { opacity: .85; }
+.task-card.done .task-text a { color: rgba(255, 255, 255, .8); }
 
 /* Compact cards clamp long text; tap to expand */
 .task-card.expandable { cursor: pointer; }
@@ -536,24 +525,26 @@ button { font: inherit; cursor: pointer; }
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.task-card.done .task-text { text-decoration: line-through; color: var(--text-dim); }
+.task-card.done .task-text { text-decoration: line-through; color: rgba(0, 0, 0, .55); }
 
 .task-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 
 .age-chip, .img-chip {
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-dim);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  color: #444;
+  background: #fff;
+  border: 1px solid transparent;
   border-radius: 999px;
   padding: 2px 8px;
 }
+/* outside cards (edit dialog) the chip sits on a surface again */
+.edit-modal .age-chip { color: var(--text-dim); background: var(--surface-2); border-color: var(--line); }
 
 .expand-btn {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--accent);
+  border: 1px solid transparent;
+  background: #fff;
+  color: #2f6bff;
   border-radius: 999px;
   width: 22px;
   height: 22px;
@@ -564,9 +555,9 @@ button { font: inherit; cursor: pointer; }
   place-items: center;
   margin-left: auto;
 }
-.expand-btn:hover { border-color: var(--accent); }
+.expand-btn:hover { border-color: rgba(255, 255, 255, .8); }
 
-.stamp { font-size: 10px; color: var(--text-dim); letter-spacing: .02em; }
+.stamp { font-size: 10px; color: #d9dfec; letter-spacing: .02em; }
 
 /* "Show all / show fewer" bar when a quadrant holds more than the cap */
 .more-bar {
@@ -581,20 +572,21 @@ button { font: inherit; cursor: pointer; }
 }
 .more-bar:hover { background: var(--surface-2); }
 
-/* Details shown on an expanded card only */
+/* Details shown on an expanded card only: white panel, black text */
 .task-details {
   font-size: 13px;
   line-height: 1.5;
   margin: 6px 0 4px;
   padding: 8px 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: #fff;
+  color: #000;
+  border: 1px solid rgba(0, 0, 0, .08);
   border-radius: 8px;
   overflow-wrap: anywhere;
   cursor: auto;
   user-select: text;
 }
-.task-details a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.task-details a { color: #2f6bff; text-decoration: underline; text-underline-offset: 2px; }
 .task-details > :last-child { margin-bottom: 0; }
 
 .task-thumbs { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
@@ -628,15 +620,15 @@ button { font: inherit; cursor: pointer; }
 .icon-btn {
   border: none;
   background: transparent;
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, .85);
   border-radius: 8px;
   width: 28px; height: 28px;
   font-size: 14px;
   display: grid;
   place-items: center;
 }
-.icon-btn:hover { background: var(--surface); color: var(--text); }
-.icon-btn.delete:hover { color: var(--danger); }
+.icon-btn:hover { background: rgba(255, 255, 255, .18); color: #fff; }
+.icon-btn.delete:hover { color: #ffb3b6; }
 
 /* ---------- Archive drawer ---------- */
 
@@ -759,13 +751,7 @@ button { font: inherit; cursor: pointer; }
   .topbar-right { margin-left: auto; }
   .threshold-ctl { display: none; } /* keep the bar compact; default threshold applies */
 
-  .matrix-wrap {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    grid-template-areas: "quads";
-    padding: 0 14px;
-  }
-  .y-axis, .x-axis { display: none; }
+  .matrix-wrap { padding: 0 14px; }
 
   .quads { grid-template-columns: 1fr; }
   /* dissolve the columns so the priority order below applies */

@@ -22,6 +22,10 @@ any browser, or host the folder on any static host (GitHub Pages works great).
 ## Features
 
 - **Work / Home context switcher** — two fully separate task lists, one toggle.
+- **Drag to reorder** — every active card has a ⠿ handle; drag it to
+  reorder tasks within their quadrant (works with mouse and touch). The
+  custom order is saved per task and syncs across devices; new tasks
+  append at the bottom.
 - **Foldable, capped quadrants** — tap a quadrant's header to fold it down
   to a slim bar (the count badge and ▾ caret stay visible) and tap again to
   unfold. Each quadrant shows at most 8 tasks; when there are more, a
@@ -95,7 +99,7 @@ Task shape:
 ```js
 { id, text, details: sanitizedHTML, context: 'work'|'home',
   urgency: 'high'|'low', createdAt, completedAt|null,
-  updatedAt, images: [dataURL…] }
+  updatedAt, sortKey?, images: [dataURL…] }
 ```
 
 ## Cross-device sync (Google Drive)

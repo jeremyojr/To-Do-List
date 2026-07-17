@@ -656,8 +656,9 @@ const UI = (() => {
     refreshYearOptions();
     updateFilterStatus(active.length, archived.length);
 
-    // Oldest first inside each quadrant — the longest-waiting task tops the pile.
-    active.sort((a, b) => a.createdAt - b.createdAt);
+    // Manual order (drag to reorder) with oldest-first as the default:
+    // sortKey falls back to createdAt for tasks never dragged.
+    active.sort((a, b) => orderKey(a) - orderKey(b));
 
     const groups = { 'high-new': [], 'high-old': [], 'low-new': [], 'low-old': [] };
     for (const task of active) {
@@ -811,6 +812,73 @@ const UI = (() => {
   const detailsPlain = task =>
     (task.details || '').replace(/<[^>]+>/g, ' ');
 
+  /* ---- drag to reorder (within a quadrant) ----
+     Pointer-events based so it works with mouse AND touch. Dragging the
+     ⠿ handle moves the card live between its visible siblings; on drop
+     the task gets a sortKey placed midway between its new neighbours'
+     keys (only the dragged task is written, so sync merges stay clean). */
+
+  const orderKey = t => t.sortKey ?? t.createdAt;
+
+  function persistOrder(card, task) {
+    const isCard = el => !!el && el.classList !== undefined && el.classList.contains('task-card');
+    const byEl = el => Store.tasks.find(t => t.id === el.dataset.taskId);
+    const prev = isCard(card.previousElementSibling) ? byEl(card.previousElementSibling) : null;
+    const next = isCard(card.nextElementSibling) ? byEl(card.nextElementSibling) : null;
+    let k = null;
+    if (prev && next) k = (orderKey(prev) + orderKey(next)) / 2;
+    else if (prev) k = orderKey(prev) + 60_000;
+    else if (next) k = orderKey(next) - 60_000;
+    if (k !== null && k !== orderKey(task)) Store.updateTask(task.id, { sortKey: k });
+    render();
+  }
+
+  function attachDrag(handle, card, task) {
+    handle.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      const body = card.parentElement;
+      const startY = e.clientY;
+      let active = false;
+
+      // Listen on document: moving the card in the DOM mid-drag would
+      // silently release pointer capture, so capture can't be relied on.
+      const onMove = ev => {
+        if (ev.pointerId !== e.pointerId) return;
+        if (!active) {
+          if (Math.abs(ev.clientY - startY) < 6) return; // ignore jitter
+          active = true;
+          card.classList.add('dragging');
+        }
+        let before = null;
+        for (const c of body.querySelectorAll('.task-card')) {
+          if (c === card) continue;
+          const r = c.getBoundingClientRect();
+          if (ev.clientY < r.top + r.height / 2) { before = c; break; }
+        }
+        if (before) {
+          if (before !== card && before !== card.nextElementSibling) body.insertBefore(card, before);
+        } else {
+          const bar = body.querySelector('.more-bar');
+          if (bar) { if (card.nextElementSibling !== bar) body.insertBefore(card, bar); }
+          else if (card !== body.lastElementChild) body.appendChild(card);
+        }
+      };
+      const onEnd = ev => {
+        if (ev.pointerId !== e.pointerId) return;
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onEnd);
+        document.removeEventListener('pointercancel', onEnd);
+        if (!active) return;
+        card.classList.remove('dragging');
+        persistOrder(card, task);
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onEnd);
+      document.addEventListener('pointercancel', onEnd);
+    });
+  }
+
   function taskCard(task, pulse) {
     // Cards render compact (clamped text, image count chip); tapping the
     // card expands it to show the full text, details, and attached images.
@@ -820,11 +888,12 @@ const UI = (() => {
     const card = document.createElement('div');
     card.className = 'task-card' + (pulse ? ' pulse' : '') + (task.completedAt ? ' done' : '')
       + (expandable ? ' expandable' : '') + (isOpen ? ' open' : '');
+    card.dataset.taskId = task.id;
 
     if (expandable) {
       card.addEventListener('click', e => {
-        // buttons/links act on their own; details stay selectable/copyable
-        if (e.target.closest('button, a, .task-details')) return;
+        // buttons/links/handle act on their own; details stay selectable
+        if (e.target.closest('button, a, .task-details, .drag-handle')) return;
         expandedTasks.has(task.id) ? expandedTasks.delete(task.id) : expandedTasks.add(task.id);
         render();
       });
@@ -925,6 +994,15 @@ const UI = (() => {
     });
     actions.appendChild(del);
 
+    if (!task.completedAt) {
+      const handle = document.createElement('span');
+      handle.className = 'drag-handle';
+      handle.title = 'Drag to reorder';
+      handle.setAttribute('aria-hidden', 'true');
+      handle.textContent = '\u283f';
+      attachDrag(handle, card, task);
+      card.append(handle);
+    }
     card.append(check, main, actions);
     return card;
   }
