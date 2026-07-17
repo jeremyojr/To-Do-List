@@ -45,7 +45,7 @@
     <div class="composer-box">
       <div class="composer-row">
         <input id="new-task-text" type="text" autocomplete="off"
-               placeholder="Add a task… (paste an image here to attach it)" />
+               placeholder="Add a task" />
         <button id="details-toggle" class="details-toggle" title="Add details (paragraphs, bullets…)">▾</button>
         <div class="urgency-pick" role="radiogroup" aria-label="Urgency">
           <button id="urg-low"  class="urg-btn selected" role="radio" aria-checked="true">Low</button>
@@ -54,7 +54,7 @@
         <button id="add-task" class="add-btn">Add</button>
       </div>
       <div id="task-details" class="details-editor" contenteditable="true" hidden
-           data-placeholder="Details… Enter starts a new paragraph. Bullets and numbering survive pasting from other sites."></div>
+           data-placeholder="Details"></div>
       <div id="draft-images" class="draft-images" hidden></div>
     </div>
   </section>
@@ -93,19 +93,19 @@
 
     <div class="quads">
       <section class="quad" id="quad-high-new" data-urgency="high" data-age="new">
-        <header><h2>🔥 Important · New <span class="quad-count" hidden></span></h2><span class="quad-hint">just landed, hot</span></header>
+        <header><h2>🔥 Important · New <span class="quad-count" hidden></span></h2><span class="quad-hint">just landed, hot</span><span class="quad-caret" aria-hidden="true">▴</span></header>
         <div class="quad-body"></div>
       </section>
       <section class="quad" id="quad-high-old" data-urgency="high" data-age="old">
-        <header><h2>🚨 Important · Aging <span class="quad-count" hidden></span></h2><span class="quad-hint">do these first</span></header>
+        <header><h2>🚨 Important · Aging <span class="quad-count" hidden></span></h2><span class="quad-hint">do these first</span><span class="quad-caret" aria-hidden="true">▴</span></header>
         <div class="quad-body"></div>
       </section>
       <section class="quad" id="quad-low-new" data-urgency="low" data-age="new">
-        <header><h2>🌱 Regular · New <span class="quad-count" hidden></span></h2><span class="quad-hint">fresh, no rush</span></header>
+        <header><h2>🌱 Regular · New <span class="quad-count" hidden></span></h2><span class="quad-hint">fresh, no rush</span><span class="quad-caret" aria-hidden="true">▴</span></header>
         <div class="quad-body"></div>
       </section>
       <section class="quad" id="quad-low-old" data-urgency="low" data-age="old">
-        <header><h2>🪨 Regular · Aging <span class="quad-count" hidden></span></h2><span class="quad-hint">lingering — finish or drop</span></header>
+        <header><h2>🪨 Regular · Aging <span class="quad-count" hidden></span></h2><span class="quad-hint">lingering — finish or drop</span><span class="quad-caret" aria-hidden="true">▴</span></header>
         <div class="quad-body"></div>
       </section>
     </div>
@@ -136,7 +136,7 @@
       <h2>Edit task</h2>
       <textarea id="edit-text" rows="2"></textarea>
       <div id="edit-details" class="details-editor" contenteditable="true"
-           data-placeholder="Details… (optional — paragraphs, bullets, numbering)"></div>
+           data-placeholder="Details (optional)"></div>
       <div class="edit-row">
         <div class="urgency-pick" role="radiogroup" aria-label="Urgency">
           <button type="button" id="edit-urg-low"  class="urg-btn">Low</button>

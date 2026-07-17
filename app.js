@@ -555,8 +555,9 @@ const UI = (() => {
   // View state (session-only): quadrants showing their full list, and
   // individual tasks expanded to reveal full text + attached images.
   const QUAD_CAP = 8;
-  const expandedQuads = new Set(); // quadrant keys, e.g. 'high-old'
-  const expandedTasks = new Set(); // task ids
+  const expandedQuads = new Set();  // quadrants showing more than the cap
+  const collapsedQuads = new Set(); // quadrants folded to just their header
+  const expandedTasks = new Set();  // task ids
 
   /* ---- filter & search (applies to matrix AND archive) ---- */
 
@@ -677,7 +678,13 @@ const UI = (() => {
     const count = section.querySelector('.quad-count');
     count.hidden = !tasks.length;
     count.textContent = tasks.length;
-    section.querySelector('header').classList.toggle('clickable', tasks.length > QUAD_CAP);
+
+    // Header click folds the whole quadrant to its header (count stays)
+    const collapsed = collapsedQuads.has(key);
+    section.classList.toggle('collapsed', collapsed);
+    const caret = section.querySelector('.quad-caret');
+    caret.textContent = collapsed ? '\u25be' : '\u25b4';
+    if (collapsed) return;
 
     if (!tasks.length) {
       expandedQuads.delete(key);
@@ -1140,11 +1147,12 @@ const UI = (() => {
     els.ctxWork.addEventListener('click', () => setContext('work'));
     els.ctxHome.addEventListener('click', () => setContext('home'));
 
-    // Tapping a quadrant header expands/collapses its list (when over the cap)
+    // Tapping a quadrant header folds/unfolds the whole quadrant
     for (const [key, body] of Object.entries(els.quads)) {
       const header = body.closest('.quad').querySelector('header');
       header.addEventListener('click', () => {
-        if (header.classList.contains('clickable')) toggleQuad(key);
+        collapsedQuads.has(key) ? collapsedQuads.delete(key) : collapsedQuads.add(key);
+        render();
       });
     }
 

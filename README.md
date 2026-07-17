@@ -22,10 +22,10 @@ any browser, or host the folder on any static host (GitHub Pages works great).
 ## Features
 
 - **Work / Home context switcher** — two fully separate task lists, one toggle.
-- **Capped quadrants** — each quadrant shows at most 8 tasks. When there are
-  more, a "+N more" bar appears; tap it (or the quadrant header) to expand to
-  the full list, tap again to collapse. The header badge always shows the true
-  count.
+- **Foldable, capped quadrants** — tap a quadrant's header to fold it down
+  to a slim bar (the count badge and ▾ caret stay visible) and tap again to
+  unfold. Each quadrant shows at most 8 tasks; when there are more, a
+  "+N more" bar expands to the full list.
 - **Rich-text details** — the ▾ arrow in the composer opens a details box
   contiguous with the title field, where Enter starts a new paragraph and
   formatting pasted from other sites
