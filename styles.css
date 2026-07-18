@@ -16,8 +16,8 @@
 
   --q-high-old: #e5484d;   /* urgent + aging  → red    */
   --q-high-new: #f0883e;   /* urgent + new    → orange */
-  --q-low-new:  #0b3d2e;   /* regular + new   → deep green */
-  --q-low-old:  #13265c;   /* regular + aging → deep blue  */
+  --q-low-new:  #8a9a5b;   /* regular + new   → sage green */
+  --q-low-old:  #a5b8d6;   /* regular + aging → soft blue  */
 
   --radius: 14px;
   --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 16px rgba(16, 24, 40, .06);
@@ -451,9 +451,9 @@ button { font: inherit; cursor: pointer; }
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  /* fixed card palette in both themes: soft neumorphic light-blue card,
+  /* fixed card palette in both themes: warm gold card,
      dark bold task text, grey timestamp */
-  background: #a0d2ff;
+  background: #e8b923;
   border: none;
   border-left: 3px solid var(--qc);
   border-radius: 14px;
@@ -517,7 +517,7 @@ button { font: inherit; cursor: pointer; }
   border: none;
   border-radius: 999px;
   /* soft neumorphic button raised out of the card surface */
-  background: #a0d2ff;
+  background: #e8b923;
   box-shadow: 2px 3px 6px rgba(31, 42, 56, .3),
               -1px -1px 3px rgba(255, 255, 255, .35);
   color: transparent;
@@ -569,7 +569,7 @@ button { font: inherit; cursor: pointer; }
 
 .expand-btn {
   border: none;
-  background: #a0d2ff;
+  background: #e8b923;
   box-shadow: 2px 2px 5px rgba(31, 42, 56, .3), -1px -1px 3px rgba(255, 255, 255, .3);
   color: #1f2a38;
   border-radius: 999px;
