@@ -453,12 +453,25 @@ button { font: inherit; cursor: pointer; }
   gap: 10px;
   /* fixed card palette in both themes: warm gold card,
      dark bold task text, grey timestamp */
-  background: #e8b923;
+  background-color: #e8b923;
+  /* gentle extruded depth: light at the top, subtle darken toward the base */
+  background-image: linear-gradient(180deg,
+    rgba(255, 255, 255, .30) 0%, rgba(255, 255, 255, .05) 20%,
+    rgba(31, 42, 56, .04) 70%, rgba(31, 42, 56, .10) 100%);
   border: none;
   border-left: 3px solid var(--qc);
   border-radius: 14px;
   padding: 12px;
-  box-shadow: 4px 5px 12px rgba(31, 42, 56, .22);
+  /* elegant shine (white top + side edge highlights), a soft inset base
+     for extruded depth, and a soft multi-layered grey drop shadow */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .75),
+    inset 1px 0 0 rgba(255, 255, 255, .32),
+    inset -1px 0 0 rgba(255, 255, 255, .24),
+    inset 0 -2px 3px rgba(31, 42, 56, .14),
+    0 1px 2px rgba(31, 42, 56, .20),
+    0 5px 10px rgba(31, 42, 56, .16),
+    0 12px 24px rgba(31, 42, 56, .12);
   animation: card-in .25s ease;
 }
 

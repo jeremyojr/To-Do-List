@@ -556,7 +556,7 @@ const UI = (() => {
   // individual tasks expanded to reveal full text + attached images.
   const QUAD_CAP = 8;
   const expandedQuads = new Set();  // quadrants showing more than the cap
-  const collapsedQuads = new Set(); // quadrants folded to just their header
+  const quadCollapse = new Map();   // key -> explicit collapsed bool (else empty quads collapse by default)
   const expandedTasks = new Set();  // task ids
 
   /* ---- filter & search (applies to matrix AND archive) ---- */
@@ -681,7 +681,8 @@ const UI = (() => {
     count.textContent = tasks.length;
 
     // Header click folds the whole quadrant to its header (count stays)
-    const collapsed = collapsedQuads.has(key);
+    // Empty quadrants start collapsed; a manual header tap overrides that.
+    const collapsed = quadCollapse.has(key) ? quadCollapse.get(key) : tasks.length === 0;
     section.classList.toggle('collapsed', collapsed);
     const caret = section.querySelector('.quad-caret');
     caret.textContent = collapsed ? '\u25be' : '\u25b4';
@@ -1256,7 +1257,8 @@ const UI = (() => {
     for (const [key, body] of Object.entries(els.quads)) {
       const header = body.closest('.quad').querySelector('header');
       header.addEventListener('click', () => {
-        collapsedQuads.has(key) ? collapsedQuads.delete(key) : collapsedQuads.add(key);
+        // flip from whatever is currently shown, recording the override
+        quadCollapse.set(key, !body.closest('.quad').classList.contains('collapsed'));
         render();
       });
     }
