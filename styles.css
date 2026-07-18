@@ -16,11 +16,12 @@
 
   --q-high-old: #e5484d;   /* urgent + aging  → red    */
   --q-high-new: #f0883e;   /* urgent + new    → orange */
-  --q-low-new:  #30a46c;   /* chill + new     → green  */
-  --q-low-old:  #8e6cd8;   /* chill + aging   → violet */
+  --q-low-new:  #0b3d2e;   /* regular + new   → deep green */
+  --q-low-old:  #13265c;   /* regular + aging → deep blue  */
 
   --radius: 14px;
   --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 16px rgba(16, 24, 40, .06);
+  --bevel-hi: rgba(255, 255, 255, .7);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,6 +33,7 @@
     --text-dim: #9aa1b2;
     --line: #2e3342;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35);
+  --bevel-hi: rgba(255, 255, 255, .05);
   }
 }
 
@@ -44,6 +46,7 @@
   --text-dim: #9aa1b2;
   --line: #2e3342;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35);
+  --bevel-hi: rgba(255, 255, 255, .05);
 }
 :root[data-theme="light"] {
   --bg: #f4f5f7;
@@ -53,6 +56,7 @@
   --text-dim: #6b7280;
   --line: #e3e6ec;
   --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 16px rgba(16, 24, 40, .06);
+  --bevel-hi: rgba(255, 255, 255, .7);
 }
 
 * { box-sizing: border-box; }
@@ -380,7 +384,10 @@ button { font: inherit; cursor: pointer; }
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  /* very slight neumorphic bevel */
+  box-shadow: 5px 5px 12px rgba(31, 42, 56, .10),
+              -4px -4px 10px var(--bevel-hi),
+              inset 0 1px 0 var(--bevel-hi);
   min-height: 220px;
   display: flex;
   flex-direction: column;
@@ -451,15 +458,23 @@ button { font: inherit; cursor: pointer; }
   border-left: 3px solid var(--qc);
   border-radius: 14px;
   padding: 12px;
-  box-shadow: 6px 6px 14px rgba(31, 42, 56, .22),
-              -6px -6px 14px rgba(255, 255, 255, .65);
+  box-shadow: 4px 5px 12px rgba(31, 42, 56, .22);
   animation: card-in .25s ease;
 }
 
+/* Lifted card while dragging: deep grey drop shadow with soft penumbra */
 .task-card.dragging {
-  opacity: .8;
-  box-shadow: 10px 12px 28px rgba(31, 42, 56, .38),
-              -6px -6px 14px rgba(255, 255, 255, .5);
+  animation: none;
+  transition: none;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, .28),
+              0 12px 22px rgba(15, 23, 42, .30),
+              0 28px 56px rgba(15, 23, 42, .26);
+}
+
+.drag-placeholder {
+  border: 2px dashed rgba(31, 42, 56, .3);
+  border-radius: 14px;
+  background: rgba(31, 42, 56, .06);
 }
 
 .drag-handle {
@@ -503,8 +518,8 @@ button { font: inherit; cursor: pointer; }
   border-radius: 999px;
   /* soft neumorphic button raised out of the card surface */
   background: #a0d2ff;
-  box-shadow: 3px 3px 7px rgba(31, 42, 56, .3),
-              -3px -3px 7px rgba(255, 255, 255, .85);
+  box-shadow: 2px 3px 6px rgba(31, 42, 56, .3),
+              -1px -1px 3px rgba(255, 255, 255, .35);
   color: transparent;
   font-size: 13px;
   line-height: 1;
@@ -555,7 +570,7 @@ button { font: inherit; cursor: pointer; }
 .expand-btn {
   border: none;
   background: #a0d2ff;
-  box-shadow: 2px 2px 5px rgba(31, 42, 56, .3), -2px -2px 5px rgba(255, 255, 255, .85);
+  box-shadow: 2px 2px 5px rgba(31, 42, 56, .3), -1px -1px 3px rgba(255, 255, 255, .3);
   color: #1f2a38;
   border-radius: 999px;
   width: 22px;

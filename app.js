@@ -838,18 +838,42 @@ const UI = (() => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       e.preventDefault();
       const body = card.parentElement;
-      const startY = e.clientY;
-      let active = false;
+      const startX = e.clientX, startY = e.clientY;
+      let active = false, ph = null, rect = null;
 
-      // Listen on document: moving the card in the DOM mid-drag would
-      // silently release pointer capture, so capture can't be relied on.
+      // Listen on document: the floating card ignores pointer events and
+      // capture can't be relied on once elements move around it.
       const onMove = ev => {
         if (ev.pointerId !== e.pointerId) return;
         if (!active) {
-          if (Math.abs(ev.clientY - startY) < 6) return; // ignore jitter
+          if (Math.abs(ev.clientY - startY) < 6 && Math.abs(ev.clientX - startX) < 6) return;
           active = true;
+          // Lift the card out of the flow: a placeholder keeps the slot,
+          // the card itself floats and follows the cursor.
+          rect = card.getBoundingClientRect();
+          ph = document.createElement('div');
+          ph.className = 'drag-placeholder';
+          ph.style.height = rect.height + 'px';
+          body.insertBefore(ph, card);
           card.classList.add('dragging');
+          card.style.position = 'fixed';
+          card.style.left = rect.left + 'px';
+          card.style.top = rect.top + 'px';
+          card.style.width = rect.width + 'px';
+          card.style.zIndex = '50';
+          card.style.pointerEvents = 'none';
         }
+        // Follow the cursor, but never leave the quadrant
+        const q = body.getBoundingClientRect();
+        let dx = ev.clientX - startX;
+        let dy = ev.clientY - startY;
+        dx = Math.max(q.left - rect.left, Math.min(dx, q.right - rect.right));
+        dy = Math.max(q.top - rect.top, Math.min(dy, q.bottom - rect.bottom));
+        // slight parallax tilt toward the direction of horizontal pull
+        const tilt = Math.max(-2.5, Math.min(2.5, dx / 24));
+        card.style.transform = `translate(${dx}px, ${dy}px) rotate(${tilt}deg) scale(1.02)`;
+
+        // The placeholder tracks the drop slot among visible siblings
         let before = null;
         for (const c of body.querySelectorAll('.task-card')) {
           if (c === card) continue;
@@ -857,11 +881,11 @@ const UI = (() => {
           if (ev.clientY < r.top + r.height / 2) { before = c; break; }
         }
         if (before) {
-          if (before !== card && before !== card.nextElementSibling) body.insertBefore(card, before);
+          if (ph.nextElementSibling !== before) body.insertBefore(ph, before);
         } else {
           const bar = body.querySelector('.more-bar');
-          if (bar) { if (card.nextElementSibling !== bar) body.insertBefore(card, bar); }
-          else if (card !== body.lastElementChild) body.appendChild(card);
+          if (bar) { if (ph.nextElementSibling !== bar) body.insertBefore(ph, bar); }
+          else if (ph !== body.lastElementChild) body.appendChild(ph);
         }
       };
       const onEnd = ev => {
@@ -871,6 +895,9 @@ const UI = (() => {
         document.removeEventListener('pointercancel', onEnd);
         if (!active) return;
         card.classList.remove('dragging');
+        card.style.cssText = ''; // drop back into the flow
+        body.insertBefore(card, ph);
+        ph.remove();
         persistOrder(card, task);
       };
       document.addEventListener('pointermove', onMove);
