@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="stylesheet" href="popup.css" />
+<title>Auto Spacebar Presser</title>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>⎵ Spacebar Presser</h1>
+    <div class="target" id="target" title="">…</div>
+  </header>
+
+  <div class="dial" id="dial">
+    <svg width="150" height="150" viewBox="0 0 150 150">
+      <circle class="track" cx="75" cy="75" r="66" fill="none" stroke-width="10" />
+      <circle class="progress" id="ring" cx="75" cy="75" r="66" fill="none" stroke-width="10" />
+    </svg>
+    <div class="center">
+      <div class="count" id="countdown">—<small>s</small></div>
+      <div class="label" id="stateLabel">Idle</div>
+    </div>
+  </div>
+
+  <button class="btn" id="toggle">Start</button>
+  <div class="note" id="note"></div>
+
+  <div class="seg" id="seg">
+    <button type="button" data-mode="single" class="active">Single press</button>
+    <button type="button" data-mode="pair">Musical chairs</button>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label for="minInput">Min (seconds)</label>
+      <input type="number" id="minInput" min="1" step="1" value="20" inputmode="numeric" />
+    </div>
+    <div class="field">
+      <label for="maxInput">Max (seconds)</label>
+      <input type="number" id="maxInput" min="1" step="1" value="60" inputmode="numeric" />
+    </div>
+  </div>
+
+  <div class="row" id="gapRow" hidden>
+    <div class="field">
+      <label for="gapInput">Second press after (seconds)</label>
+      <input type="number" id="gapInput" min="1" step="1" value="5" inputmode="numeric" />
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="num" id="pressCount">0</div><div class="cap">Presses</div></div>
+    <div class="stat"><div class="num" id="nextWait">—</div><div class="cap">This wait</div></div>
+  </div>
+
+  <p class="foot" id="foot">Each interval is re-randomized (cryptographically) in your range. Runs on the tab shown above, even in the background.</p>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>
