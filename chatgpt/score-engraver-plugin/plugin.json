@@ -1,0 +1,5 @@
+{
+  "name": "score-engraver",
+  "version": "2.0.0",
+  "description": "Rewrite sheet music from images or scans as a new high-definition engraved PDF with chord symbols and small bold note-name labels."
+}

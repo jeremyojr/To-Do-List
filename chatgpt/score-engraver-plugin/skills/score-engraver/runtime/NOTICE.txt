@@ -1,0 +1,4 @@
+GNU LilyPond 2.24.3 runtime (lilypond.org), unmodified binaries from the
+official PyPI wheel, trimmed to the engraver, its Guile and Ghostscript
+back ends, fonts and licences. Licensed under the GNU GPL v3 or later; the
+licence texts are inside the archive under lilypond/licenses.

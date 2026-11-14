@@ -1,0 +1,20 @@
+{
+  "name": "score-engraver",
+  "version": "2.0.0",
+  "description": "Rewrite sheet music from images or scans as a new high-definition engraved PDF with chord symbols and small bold note-name labels.",
+  "author": {
+    "name": "Independent developer"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Score Engraver",
+    "shortDescription": "Re-engrave sheet music as a clean PDF with chords and note labels.",
+    "longDescription": "Re-types a score from photos, screenshots or scanned PDFs note by note, typesets it with the bundled LilyPond engraver, then adds chord symbols above the staff and small bold pitch labels beside the noteheads. The result is a print-ready vector PDF with no added headers, legends or other filler.",
+    "developerName": "Independent developer",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ]
+  }
+}

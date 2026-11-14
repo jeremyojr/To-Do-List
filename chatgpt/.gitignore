@@ -1,0 +1,3 @@
+# LilyPond runtime archive parts are build products (see build.sh)
+score-engraver-plugin/skills/score-engraver/runtime/lilypond-rt.tar.xz.part*
+dist/
