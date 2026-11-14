@@ -48,10 +48,14 @@ def find_lilypond():
             import lilypond
             return str(lilypond.executable())
         except ImportError:
-            if not attempt:
-                pip_install(PIN)
-    sys.exit("LilyPond >= 2.24 not found and `pip install lilypond` failed. "
-             "Install it (pip install lilypond, or apt-get install lilypond) and re-run.")
+            if not attempt:      # a wheel placed nearby covers sandboxes without PyPI access
+                local = [w for d in (Path.cwd(), Path(__file__).resolve().parent,
+                                     Path("/mnt/data"), Path.home())
+                         for w in sorted(d.glob("lilypond-*.whl"))]
+                pip_install(str(local[0]) if local else PIN)
+    sys.exit("LilyPond >= 2.24 not found and `pip install lilypond` failed. Install it, "
+             "or put the lilypond-2.24.3 manylinux wheel from pypi.org/project/lilypond "
+             "in the working folder, and re-run.")
 
 
 def flat(im):
